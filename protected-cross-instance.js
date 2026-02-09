@@ -43,8 +43,11 @@ export class A { // Base class
 	// ** ADDED **
 	_getGuardedFor (auth, otherInstance) {
 		if (auth !== this.#guarded) throw new Error('Unauthorized method call');
+		// The following check might or might not be appropriate for your use case
+		// Note: Prototypes are usually mutable, so the following check isn't secure
+		if (Object.getPrototypeOf(this) !== Object.getPrototypeOf(otherInstance)) throw new TypeError('Will not get protected properties across different types');
 		// Caller has been confirmed to be in the class hierarchy and
-		// it's safe to share another instance's protected properties
+		// it's "safe" to share another instance's protected properties
 		return guardedMap.get(otherInstance);
 	}
 
