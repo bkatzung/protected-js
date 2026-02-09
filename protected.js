@@ -60,7 +60,7 @@ class B extends A {
 
 	constructor () {
 		super();
-		super._getGuarded(); // Obtain protected property access
+		this._getGuarded(); // Obtain protected property access
 		// this.#guarded is now populated and available for use here
 		const guarded = this.#guarded;
 	}

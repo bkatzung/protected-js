@@ -32,7 +32,7 @@ class Animal extends A {
 
     constructor(name) {
         super();
-        super._getGuarded();
+        this._getGuarded();
         const guarded = this.#guarded;
         
         // Initialize protected properties
@@ -58,7 +58,7 @@ class Dog extends Animal {
 
     constructor(name, breed) {
         super(name);
-        super._getGuarded();
+        this._getGuarded();
         const guarded = this.#guarded;
         
         // Access protected properties from parent
@@ -99,7 +99,7 @@ class Node extends A {
 
     constructor(value) {
         super();
-        super._getGuarded();
+        this._getGuarded();
         const guarded = this.#guarded;
         guarded.value = value;
     }
@@ -141,7 +141,7 @@ class Example extends A {
     
     constructor() {
         super();
-        super._getGuarded();
+        this._getGuarded();
         const guarded = this.#guarded;
         
         this.publicField = 'public';           // Public: accessible everywhere
@@ -172,7 +172,7 @@ Additional method in [`protected-cross-instance.js`](protected-cross-instance.js
 For each class in your hierarchy:
 
 1. Declare a private `#guarded` field
-2. Call `super()` and `super._getGuarded()` in the constructor
+2. Call `super()` and `this._getGuarded()` in the constructor
 3. Implement `_subGuarded(subs)` to subscribe to protected properties
 4. Access protected properties via `this.#guarded.propertyName`
 
