@@ -66,9 +66,8 @@ class B extends A {
 	}
 
 	_subGuarded (subs) { // Subscribe to protected properties
-		if (this.#guarded) return; // Only allow subscription once
 		super._subGuarded(subs); // Optional if super-class is the base
-		subs.add((g) => this.#guarded = g);
+		subs.add((g) => this.#guarded ||= g); // Set this.#guarded once
 	}
 
 	callGuardedMethod () {

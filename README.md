@@ -1,6 +1,6 @@
 # protected-js
 
-A pattern for implementing protected properties and methods in native JavaScript using ES6 private fields.
+A pattern for implementing protected properties and methods in native JavaScript using ES2022 private fields.
 
 ## Overview
 
@@ -41,9 +41,8 @@ class Animal extends A {
     }
 
     _subGuarded(subs) {
-        if (this.#guarded) return;
         super._subGuarded(subs);
-        subs.add((g) => this.#guarded = g);
+        subs.add((g) => this.#guarded ||= g);
     }
 
     // Protected method
@@ -68,9 +67,8 @@ class Dog extends Animal {
     }
 
     _subGuarded(subs) {
-        if (this.#guarded) return;
         super._subGuarded(subs);
-        subs.add((g) => this.#guarded = g);
+        subs.add((g) => this.#guarded ||= g);
     }
 
     bark() {
@@ -107,9 +105,8 @@ class Node extends A {
     }
 
     _subGuarded(subs) {
-        if (this.#guarded) return;
         super._subGuarded(subs);
-        subs.add((g) => this.#guarded = g);
+        subs.add((g) => this.#guarded ||= g);
     }
 
     compareWith(otherNode) {
