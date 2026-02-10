@@ -30,11 +30,10 @@ export class A { // Base class
 				subs.delete(sub); // Remove successfully-completed subscriptions
 			}
 		}
-		catch (_) {}
+		catch (_) { }
 	}
 
-	// Optional base-class stub for sub-class interface consistency
-	_subGuarded () { }
+	_subGuarded () { } // Stub for new A() and sub-class consistency
 
 	method () { // Example consumer
 		const guarded = this.#guarded;
@@ -60,13 +59,14 @@ class B extends A {
 
 	constructor () {
 		super();
+		// <-- B this.#guarded no longer throws
 		this._getGuarded(); // Obtain protected property access
-		// this.#guarded is now populated and available for use here
+		// <-- B this.#guarded is now populated and available for use
 		const guarded = this.#guarded;
 	}
 
 	_subGuarded (subs) { // Subscribe to protected properties
-		super._subGuarded(subs); // Optional if super-class is the base
+		super._subGuarded(subs); // Must be first
 		subs.add((g) => this.#guarded ||= g); // Set this.#guarded once
 	}
 

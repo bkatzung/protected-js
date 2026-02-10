@@ -163,9 +163,10 @@ class Example extends A {
 
 ### Cross-Instance Variant
 
-Additional method in [`protected-cross-instance.js`](protected-cross-instance.js):
+Additional methods in [`protected-cross-instance.js`](protected-cross-instance.js):
 
-- **`_getGuardedFor(auth, otherInstance)`**: Returns the protected properties of another instance. Requires authentication via the `auth` parameter.
+- **`_getGuardedFor(auth, otherInstance)`**: Returns the protected properties of another instance. Requires authentication via the `auth` parameter. Provides full access to all protected properties.
+- **`_getSomePropFor(auth, otherInstance)`**: Example of a single-property getter for cross-instance access. Returns only a specific property (`someProp`) from another instance's protected properties, providing reduced exposure and risk.
 
 ## Implementation Pattern
 

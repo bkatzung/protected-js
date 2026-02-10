@@ -36,21 +36,32 @@ export class A { // Base class
 				subs.delete(sub); // Remove successfully-completed subscriptions
 			}
 		}
-		catch (_) {}
+		catch (_) { }
 	}
 
-	// Pseudo-protected base-class method for cross-instance protected-property access
-	// ** ADDED **
+	_subGuarded () { } // Stub for new A() and sub-class consistency
+
+	// ** Everything below is ADDED **
+
+	/*
+	 * Get **full access** to cross-instance protected properties
+	 * Be advised: This allows any sub-class instance to access any other
+	 * (same or different) sub-class instance's protected properties!
+	 */
 	_getGuardedFor (auth, otherInstance) {
 		if (auth !== this.#guarded) throw new Error('Unauthorized method call');
-		// The following check might or might not be appropriate for your use case
-		// Note: Prototypes are usually mutable, so the following check isn't secure
-		if (Object.getPrototypeOf(this) !== Object.getPrototypeOf(otherInstance)) throw new TypeError('Will not get protected properties across different types');
 		// Caller has been confirmed to be in the class hierarchy and
 		// it's "safe" to share another instance's protected properties
+		// Possible additional checks (mutable, so not secure):
+		// - Compare this and otherInstance constructors
+		// - Compare this and otherInstance prototypes
 		return guardedMap.get(otherInstance);
 	}
 
-	// Optional base-class stub for sub-class interface consistency
-	_subGuarded () { }
+	// Pseudo-protected, cross-instance, single-property getter
+	// (Reduced exposure, reduced risk)
+	_getSomePropFor (auth, otherInstance) {
+		if (auth !== this.#guarded) throw new Error('Unauthorized method call');
+		return guardedMap.get(otherInstance)?.someProp;
+	}
 }

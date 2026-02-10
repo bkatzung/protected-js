@@ -37,9 +37,12 @@ class C extends B {
 const instance = new C();
 instance.logGuarded();
 
+// Attempt to subvert protected state
+// (should not have any effect)
 const subs = new Set(), newGuarded = { updated: true };
 instance._subGuarded(subs);
 for (const sub of subs) {
 	sub(newGuarded);
 }
+// Should report same original values
 instance.logGuarded();
