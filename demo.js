@@ -1,6 +1,6 @@
-import { A } from './protected.js';
+import { Base } from './protected.js';
 
-class B extends A {
+class B extends Base {
 	#guarded;
 
 	constructor () {

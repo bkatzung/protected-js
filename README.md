@@ -15,117 +15,80 @@ JavaScript doesn't natively support protected properties (properties accessible 
 - **Type Safe**: Works seamlessly with TypeScript
 - **Lightweight**: Minimal overhead with efficient subscription pattern
 
-## Installation
+## Pattern Application
 
-Simply copy [`protected.js`](protected.js) into your project.
+### Base-Class Pattern
 
-## Usage
-
-### Basic Protected Properties
+Incorporate the base-class pattern into your base class. Excerpted from [`protected-base.js`](protected-base.js):
 
 ```javascript
-import { A } from './protected.js';
+// Base-class protected-properties-pattern essentials
+class Base {
+    #guarded = { /* Protected-properties storage */ };
+    #guardedSubs = new Set(); /* Subscribers (setter functions) */
 
-// Base class with protected properties
-class Animal extends A {
-    #guarded;
-
-    constructor(name) {
-        super();
-        this._getGuarded();
-        const guarded = this.#guarded;
-        
-        // Initialize protected properties
-        guarded.name = name;
-        guarded.energy = 100;
+    constructor () {
+        this._subGuarded(this.#guardedSubs); // Invite sub-class access
     }
 
-    _subGuarded(subs) {
-        super._subGuarded(subs);
-        subs.add((g) => this.#guarded ||= g);
-    }
+    // Distribute protected-property access
+	_getGuarded () {
+		const guarded = this.#guarded, subs = this.#guardedSubs;
+		try {
+			for (const sub of subs) {
+				sub(guarded); // Attempt distribution to subscriber
+				subs.delete(sub); // Remove successfully-completed subscriptions
+			}
+		}
+		catch (_) { }
+	}
 
-    // Protected method
-    guardedGetEnergy(guarded) {
-        if (guarded !== this.#guarded) throw new Error('Unauthorized');
-        return guarded.energy;
-    }
+	_subGuarded () { } // Base-class stub
 }
-
-// Derived class accessing protected properties
-class Dog extends Animal {
-    #guarded;
-
-    constructor(name, breed) {
-        super(name);
-        this._getGuarded();
-        const guarded = this.#guarded;
-        
-        // Access protected properties from parent
-        console.log(guarded.name); // Accessible!
-        guarded.breed = breed;
-    }
-
-    _subGuarded(subs) {
-        super._subGuarded(subs);
-        subs.add((g) => this.#guarded ||= g);
-    }
-
-    bark() {
-        const guarded = this.#guarded;
-        console.log(`${guarded.name} (${guarded.breed}) barks!`);
-        
-        // Call protected method with authentication
-        const energy = this.guardedGetEnergy(guarded);
-        console.log(`Energy: ${energy}`);
-    }
-}
-
-const dog = new Dog('Rex', 'Labrador');
-dog.bark(); // Works!
-// dog.#guarded // Error: Private field
-// dog.guarded.name // Error: Not accessible
 ```
 
-### Cross-Instance Protected Access
+### Sub-Class Pattern
 
-Cross-instance access is a natural consequence of how JavaScript private fields work. Since `#guarded` is class-private (not instance-private), methods within a class can access `#guarded` on other instances of the same class:
+Incorporate the sub-class pattern into your sub-classes. Excerpted from [`protected-sub.js`](protected-sub.js):
 
 ```javascript
-import { A } from './protected.js';
+// Sub-class protected-properties-pattern essentials
+class Sub extends Base {
+	#guarded; // Sub's private access to shared protected properties
 
-class Node extends A {
-    #guarded;
-
-    constructor(value) {
+    constructor () {
         super();
-        this._getGuarded();
-        const guarded = this.#guarded;
-        guarded.value = value;
+        this._getGuarded(); // Obtained protected-property access
     }
 
-    _subGuarded(subs) {
+	// Subscribe to #guarded protected properties
+    _subGuarded (subs) {
         super._subGuarded(subs);
         subs.add((g) => this.#guarded ||= g);
     }
+}
+```
 
-    compareWith(otherNode) {
-        const guarded = this.#guarded;
-        // Access another instance's protected properties
-        // This works because #guarded is class-private, not instance-private
-        const otherGuarded = otherNode.#guarded;
+## Cross-Instance Protected Access
+
+Cross-instance access is a natural consequence of how JavaScript private fields work. Since `#guarded` is class-private (not instance-private), methods within a class can access `#guarded` on other instances of the same (or more derived) classes:
+
+```javascript
+class Sub extends Base {
+    // ...
+
+	// Compare to another node that is instanceof Sub (i.e. Sub or extends Sub)
+    // Note that this won't work with a new Base() instance because such an instance
+    // has a Base #guarded (inaccessible to Sub methods) but not a Sub #guarded.
+    compareWith (otherNode) {
+        const guarded = this.#guarded; // Sub-level #guarded of this instance
+        const otherGuarded = otherNode.#guarded; // Sub-level #guarded of otherNode
         return guarded.value === otherGuarded.value;
     }
 }
-
-const node1 = new Node(42);
-const node2 = new Node(42);
-console.log(node1.compareWith(node2)); // true
 ```
 
-This is an unavoidable consequence of JavaScript's private field semantics - only scoped variables can create truly instance-private values, while private fields are class-private.
-
-## How It Works
+## How The Pattern Works
 
 The pattern uses three key mechanisms:
 
@@ -135,18 +98,18 @@ The pattern uses three key mechanisms:
 
 3. **Distribution**: The base class distributes the protected properties to all subscribers via `_getGuarded()`, which must be called in each constructor after `super()`.
 
-### Property Access Levels
+## Property Access Levels
 
 ```javascript
-class Example extends A {
+class Example extends Base {
     #guarded;
     #privateField;  // Private: only accessible in this class
-    
-    constructor() {
+
+    constructor () {
         super();
         this._getGuarded();
         const guarded = this.#guarded;
-        
+
         this.publicField = 'public';           // Public: accessible everywhere
         guarded.protectedField = 'protected';  // Protected: accessible in hierarchy
         this.#privateField = 'private';        // Private: only in this class
@@ -154,34 +117,41 @@ class Example extends A {
 }
 ```
 
-## API Reference
+## Pseudo-Protected Methods
 
-### Base Class `A`
+Pseudo-protected methods are publicly-visible methods that require the caller to verify that it is calling from within the instance class hierarchy.
 
-#### Methods
+```javascript
+protectedMethod (guarded) {
+    if (guarded !== this.#guarded) throw new Error('Unauthorized method call');
+}
 
-- **`_getGuarded()`**: Distributes protected properties to subscribers. Must be called in each constructor after `super()`.
-- **`_subGuarded(subs)`**: Override this to subscribe to protected properties. Add your setter function to the `subs` Set.
-- **`guardedMethod(guarded)`**: Example of a protected method that requires authentication via the `guarded` parameter.
+// A method at any class level can call a pseudo-protected method on its own instance
+// (the #guarded of each class refers to the same shared objedt).
+callProtectedMethod () {
+    this.protectedMethod(this.#guarded);
+}
 
-## Implementation Pattern
-
-For each class in your hierarchy:
-
-1. Declare a private `#guarded` field
-2. Call `super()` and `this._getGuarded()` in the constructor
-3. Implement `_subGuarded(subs)` to subscribe to protected properties
-4. Access protected properties via `this.#guarded.propertyName`
+// A method can also call a pseudo-protected method on another instance
+// if the other instance is instanceof the calling method's class
+callCrossProtectedMethod (other) {
+    try {
+        other.crossProtectedMethod(other.#guarded);
+    } catch (_err) {
+        // TypeError thrown if other is incompatible
+    }
+}
+```
 
 ## Browser Support
 
-Works in all modern browsers and Node.js environments that support:
+Works in all modern browsers and Deno / Node.js / etc. environments that support:
 - ES6 Classes
 - Private fields (`#`)
 
 ## License
 
-This content is placed in the public domain by the author, Brian Katzung <briank@kappacs.com>.
+This content is placed in the public domain by the author.
 
 ## Resources
 
