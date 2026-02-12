@@ -10,14 +10,14 @@ JavaScript doesn't natively support protected properties (properties accessible 
 
 - **True Protected Properties**: Properties accessible within class hierarchies but not from outside
 - **Protected Methods**: Access-controlled methods that verify caller authenticity
-- **Cross-Instance Access**: Optional variant supporting protected property access across instances
+- **Cross-Instance Access**: Naturally supports protected property access across instances of the same class
 - **Zero Dependencies**: Pure JavaScript implementation
 - **Type Safe**: Works seamlessly with TypeScript
 - **Lightweight**: Minimal overhead with efficient subscription pattern
 
 ## Installation
 
-Simply copy [`protected.js`](protected.js) or [`protected-cross-instance.js`](protected-cross-instance.js) into your project.
+Simply copy [`protected.js`](protected.js) into your project.
 
 ## Usage
 
@@ -89,10 +89,10 @@ dog.bark(); // Works!
 
 ### Cross-Instance Protected Access
 
-Use [`protected-cross-instance.js`](protected-cross-instance.js) when you need to access protected properties of other instances within the same class hierarchy:
+Cross-instance access is a natural consequence of how JavaScript private fields work. Since `#guarded` is class-private (not instance-private), methods within a class can access `#guarded` on other instances of the same class:
 
 ```javascript
-import { A } from './protected-cross-instance.js';
+import { A } from './protected.js';
 
 class Node extends A {
     #guarded;
@@ -112,7 +112,8 @@ class Node extends A {
     compareWith(otherNode) {
         const guarded = this.#guarded;
         // Access another instance's protected properties
-        const otherGuarded = this._getGuardedFor(guarded, otherNode);
+        // This works because #guarded is class-private, not instance-private
+        const otherGuarded = otherNode.#guarded;
         return guarded.value === otherGuarded.value;
     }
 }
@@ -121,6 +122,8 @@ const node1 = new Node(42);
 const node2 = new Node(42);
 console.log(node1.compareWith(node2)); // true
 ```
+
+This is an unavoidable consequence of JavaScript's private field semantics - only scoped variables can create truly instance-private values, while private fields are class-private.
 
 ## How It Works
 
@@ -161,13 +164,6 @@ class Example extends A {
 - **`_subGuarded(subs)`**: Override this to subscribe to protected properties. Add your setter function to the `subs` Set.
 - **`guardedMethod(guarded)`**: Example of a protected method that requires authentication via the `guarded` parameter.
 
-### Cross-Instance Variant
-
-Additional methods in [`protected-cross-instance.js`](protected-cross-instance.js):
-
-- **`_getGuardedFor(auth, otherInstance)`**: Returns the protected properties of another instance. Requires authentication via the `auth` parameter. Provides full access to all protected properties.
-- **`_getSomePropFor(auth, otherInstance)`**: Example of a single-property getter for cross-instance access. Returns only a specific property (`someProp`) from another instance's protected properties, providing reduced exposure and risk.
-
 ## Implementation Pattern
 
 For each class in your hierarchy:
@@ -182,7 +178,6 @@ For each class in your hierarchy:
 Works in all modern browsers and Node.js environments that support:
 - ES6 Classes
 - Private fields (`#`)
-- WeakMap (for cross-instance variant)
 
 ## License
 
