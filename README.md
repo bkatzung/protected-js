@@ -134,9 +134,10 @@ callProtectedMethod () {
 
 // A method can also call a pseudo-protected method on another instance
 // if the other instance is instanceof the calling method's class
-callCrossProtectedMethod (other) {
+// (A method in a more-derived sub-class cannot protected-call a less-derived instance)
+callOtherProtectedMethod (other) {
     try {
-        other.crossProtectedMethod(other.#guarded);
+        other.protectedMethod(other.#guarded);
     } catch (_err) {
         // TypeError thrown if other is incompatible
     }
