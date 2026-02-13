@@ -43,14 +43,15 @@ class Sub extends Base {
 		// Caller is now confirmed to be in the class hierarchy for this instance
 	}
 
-	// Example of how to call a pseudo-protected method
+	// Example of calling a pseudo-protected method on the same instance
 	callGuardedMethod () {
 		const guarded = this.#guarded;
 		this.guardedMethod(guarded);
 	}
 
+	// Example of calling a pseudo-protected method across instances
 	callOtherGuardedMethod (other) {
-		const otherGuarded = other.#guarded;
-		other.guardedMethode(otherGuarded);
+		const otherGuarded = other.#guarded; // Throws if other is incompatible
+		other.guardedMethod(otherGuarded);
 	}
 }
