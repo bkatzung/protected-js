@@ -32,11 +32,13 @@ class Base {
 	// Base-class prototype for protected shared-state object
 	static protoProtected = {
 		logGuarded () {
-			// When called as guarded.logGuarded() or this.#guarded.logGuarded():
+			// when called guarded.logGuarded (or this.#guarded.logGuarded):
 			// `this` will be the protected shared-state object
-			// `this.thys` will be the original object instance
-			const guarded = this.thys.#guarded;
-			console.log('Base #guarded:', guarded);
+			// `this.thys` will be the original object `this`
+			// Optional: verify main-object/protected-state-object association
+			if (this !== this.thys.#guarded) throw new Error('Unauthorized call');
+			console.log('Proto Base?', this.protoBase, 'Proto Sub?', this.protoSub);
+			console.log('Base #guarded:', this);
 		},
 		get protoBase () { return true; }
 	};
@@ -79,7 +81,7 @@ class Sub extends Base {
 	// Sub-class prototype for protected shared-state object
 	static protoProtected = Object.setPrototypeOf({
 		logGuarded () {
-			console.log('Sub #guarded', this.thys.#guarded);
+			console.log('Sub #guarded', this);
 			super.logGuarded(); // Call parent's protected method
 		},
 		get protoSub () { return true; }
@@ -175,8 +177,9 @@ static protoProtected = {
 	logGuarded () {
 		// `this` is the shared-state object
 		// `this.thys` is the original instance
-		const guarded = this.thys.#guarded;
-		console.log('Protected state:', guarded);
+		// Optional: verify main-object/protected-state-object association
+		if (this !== this.thys.#guarded) throw new Error('Unauthorized call');
+		console.log('Protected state:', this);
 	}
 };
 ```

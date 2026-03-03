@@ -11,7 +11,8 @@ export class Sub extends Base {
 	// Sub-class prototype for protected shared-state object
 	static protoProtected = Object.setPrototypeOf({
 		logGuarded () {
-			console.log('Sub #guarded', this.thys.#guarded);
+			if (this !== this.thys.#guarded) throw new Error('Unauthorized call');
+			console.log('Sub #guarded', this);
 			super.logGuarded();
 		},
 		get protoSub () { return true; }

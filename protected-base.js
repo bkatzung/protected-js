@@ -15,9 +15,10 @@ export class Base {
 			// when called guarded.logGuarded (or this.#guarded.logGuarded):
 			// `this` will be the protected shared-state object
 			// `this.thys` will be the original object `this`
-			const guarded = this.thys.#guarded;
-			console.log('Proto Base?', guarded.protoBase, 'Proto Sub?', guarded.protoSub);
-			console.log('Base #guarded:', guarded);
+			// Optional: verify main-object/protected-state-object association
+			if (this !== this.thys.#guarded) throw new Error('Unauthorized call');
+			console.log('Proto Base?', this.protoBase, 'Proto Sub?', this.protoSub);
+			console.log('Base #guarded:', this);
 		},
 		get protoBase () { return true; }
 	};
