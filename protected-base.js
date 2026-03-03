@@ -10,12 +10,30 @@ export class Base {
 	#guarded; // Base's private access to shared protected properties
 	#guardedSubs = new Set(); // Protected-property subscriptions (setter functions)
 
+	static protoProtected = { // Base-class prototype for protected shared-state object
+		logGuarded () {
+			// when called guarded.logGuarded (or this.#guarded.logGuarded):
+			// `this` will be the protected shared-state object
+			// `this.thys` will be the original object `this`
+			const guarded = this.thys.#guarded;
+			console.log('Proto Base?', guarded.protoBase, 'Proto Sub?', guarded.protoSub);
+			console.log('Base #guarded:', guarded);
+		},
+		get protoBase () { return true; }
+	};
+
 	constructor () {
-		const guarded = this.#guarded = { /* protected properties */ };
+		const guarded = this.#guarded = Object.create(this.constructor.protoProtected);
+		guarded.thys = this;
+		guarded.base = true;
 		this._subGuarded(this.#guardedSubs); // Invite subscribers
 		// Public props: this.prop
 		// Protected props: this.#guarded.prop (or guarded.prop)
 		// Private props: this.#prop
+	}
+
+	callProtectedLogger () {
+		this.#guarded.logGuarded();
 	}
 
 	// Distribute protected property access to ready subscribers

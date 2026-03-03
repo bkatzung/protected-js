@@ -5,8 +5,17 @@
 
 import { Base } from './protected-base.js';
 
-class Sub extends Base {
+export class Sub extends Base {
 	#guarded; // Sub's private access to shared protected properties
+
+	// Sub-class prototype for protected shared-state object
+	static protoProtected = Object.setPrototypeOf({
+		logGuarded () {
+			console.log('Sub #guarded', this.thys.#guarded);
+			super.logGuarded();
+		},
+		get protoSub () { return true; }
+	}, Base.protoProtected);
 
 	constructor () {
 		super();
@@ -14,6 +23,7 @@ class Sub extends Base {
 		this._getGuarded(); // Obtain protected property access
 		// <-- Sub's this.#guarded is now populated and available for use
 		const guarded = this.#guarded;
+		guarded.sub = true;
 	}
 
 	// Subscribe to #guarded in every sub-class needing access
