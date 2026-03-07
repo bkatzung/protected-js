@@ -85,7 +85,7 @@ class Sub extends Base {
 			super.logGuarded(); // Call parent's protected method
 		},
 		get protoSub () { return true; }
-	}, Base.protoProtected);
+	}, super.protoProtected);
 
 	constructor () {
 		super();
@@ -125,7 +125,7 @@ class Sub extends Base {
 			console.log('Sub method');
 		},
 		get protoSub () { return true; }
-	}, Base.protoProtected);
+	}, super.protoProtected);
 }
 
 // Conceptual structure (not strictly valid syntax)
@@ -199,7 +199,7 @@ class Example extends Base {
 			// Access instance via `this.thys`
 			console.log('Instance:', this.thys);
 		}
-	}, Base.protoProtected);
+	}, super.protoProtected);
 
 	constructor () {
 		super();
