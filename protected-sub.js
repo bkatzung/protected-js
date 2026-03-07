@@ -16,7 +16,7 @@ export class Sub extends Base {
 			super.logGuarded();
 		},
 		get protoSub () { return true; }
-	}, Base.protoProtected);
+	}, super.protoProtected);
 
 	constructor () {
 		super();
