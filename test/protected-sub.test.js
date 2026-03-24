@@ -7,44 +7,44 @@ import { Base } from '../protected-base.js';
 
 // Create a Sub class for testing
 class Sub extends Base {
-	#guarded;
+	#_;
 
 	constructor() {
 		super();
-		this._getGuarded();
+		this._get_();
 	}
 
-	_subGuarded(subs) {
-		super._subGuarded(subs);
-		subs.add((g) => this.#guarded ||= g);
+	_sub_(subs) {
+		super._sub_(subs);
+		subs.add((g) => this.#_ ||= g);
 	}
 
-	getGuarded() {
-		return this.#guarded;
+	get_() {
+		return this.#_;
 	}
 
 	setProtectedProp(key, value) {
-		this.#guarded[key] = value;
+		this.#_[key] = value;
 	}
 
 	getProtectedProp(key) {
-		return this.#guarded[key];
+		return this.#_[key];
 	}
 
 	// Pseudo-protected method
 	guardedMethod(guarded) {
-		if (guarded !== this.#guarded) throw new Error('Unauthorized method call');
+		if (guarded !== this.#_) throw new Error('Unauthorized method call');
 		return 'authorized';
 	}
 
 	// Method to call guardedMethod on self
 	callGuardedMethod() {
-		return this.guardedMethod(this.#guarded);
+		return this.guardedMethod(this.#_);
 	}
 
 	// Method to call guardedMethod on another instance
 	callOtherGuardedMethod(other) {
-		return other.guardedMethod(other.#guarded);
+		return other.guardedMethod(other.#_);
 	}
 }
 
@@ -55,11 +55,11 @@ Deno.test('Sub class - should create an instance successfully', () => {
 	assertEquals(instance instanceof Base, true);
 });
 
-Deno.test('Sub class - should have access to guarded properties', () => {
+Deno.test('Sub class - should have access to protected properties', () => {
 	const instance = new Sub();
-	const guarded = instance.getGuarded();
-	assertExists(guarded);
-	assertEquals(typeof guarded, 'object');
+	const _ = instance.get_();
+	assertExists(_);
+	assertEquals(typeof _, 'object');
 });
 
 Deno.test('Sub class - should be able to set and get protected properties', () => {
@@ -105,16 +105,16 @@ Deno.test('Sub class - should support cross-instance protected method calls', ()
 
 Deno.test('Sub class - can cross-call more-derived (SubSub) instance', () => {
 	class SubSub extends Sub {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
+			this._get_();
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 	}
 
@@ -122,38 +122,38 @@ Deno.test('Sub class - can cross-call more-derived (SubSub) instance', () => {
 	const subSubInstance = new SubSub();
 	
 	// Sub instance can call guardedMethod on SubSub instance
-	// because SubSub extends Sub, so Sub has access to SubSub's Sub-level #guarded
+	// because SubSub extends Sub, so Sub has access to SubSub's Sub-level #_
 	const result = subInstance.callOtherGuardedMethod(subSubInstance);
 	assertEquals(result, 'authorized');
 });
 
-Deno.test('Sub class - SubSub cannot access less-derived Sub #guarded', () => {
+Deno.test('Sub class - SubSub cannot access less-derived Sub #_', () => {
 	class SubSub extends Sub {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
+			this._get_();
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		// This method tries to access other.#guarded where #guarded is SubSub's private field
+		// This method tries to access other.#_ where #_ is SubSub's private field
 		tryCallOtherGuardedMethod(other) {
 			// This will throw TypeError if other is a Sub (not SubSub)
-			// because Sub instances don't have a SubSub-level #guarded field
-			return other.guardedMethod(other.#guarded);
+			// because Sub instances don't have a SubSub-level #_ field
+			return other.guardedMethod(other.#_);
 		}
 	}
 
 	const subInstance = new Sub();
 	const subSubInstance = new SubSub();
 	
-	// SubSub trying to access Sub's #guarded should throw TypeError
-	// because Sub doesn't have SubSub's #guarded private field
+	// SubSub trying to access Sub's #_ should throw TypeError
+	// because Sub doesn't have SubSub's #_ private field
 	assertThrows(
 		() => subSubInstance.tryCallOtherGuardedMethod(subInstance),
 		TypeError
@@ -162,23 +162,23 @@ Deno.test('Sub class - SubSub cannot access less-derived Sub #guarded', () => {
 
 Deno.test('Sub class - cross-instance access to protected properties', () => {
 	class SubWithCompare extends Base {
-		#guarded;
+		#_;
 
 		constructor(value) {
 			super();
-			this._getGuarded();
-			this.#guarded.value = value;
+			this._get_();
+			this.#_.value = value;
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
 		compareWith(otherNode) {
-			const guarded = this.#guarded;
-			const otherGuarded = otherNode.#guarded;
-			return guarded.value === otherGuarded.value;
+			const _ = this.#_;
+			const other_ = otherNode.#_;
+			return _.value === other_.value;
 		}
 	}
 
@@ -192,74 +192,74 @@ Deno.test('Sub class - cross-instance access to protected properties', () => {
 
 Deno.test('Sub class - multi-level inheritance', () => {
 	class SubSub extends Sub {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
+			this._get_();
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getSubSubGuarded() {
-			return this.#guarded;
+		getSubSub_() {
+			return this.#_;
 		}
 	}
 
 	const instance = new SubSub();
 	instance.setProtectedProp('deepProp', 'deepValue');
 	
-	// Both Sub and SubSub should have access to the same guarded object
+	// Both Sub and SubSub should have access to the same protected object
 	assertEquals(instance.getProtectedProp('deepProp'), 'deepValue');
-	assertEquals(instance.getSubSubGuarded().deepProp, 'deepValue');
+	assertEquals(instance.getSubSub_().deepProp, 'deepValue');
 });
 
 Deno.test('Sub class - protected properties are shared across hierarchy', () => {
 	class Level1 extends Base {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.level1 = 'L1';
+			this._get_();
+			this.#_.level1 = 'L1';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	class Level2 extends Level1 {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.level2 = 'L2';
+			this._get_();
+			this.#_.level2 = 'L2';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	const instance = new Level2();
-	const guarded = instance.getGuarded();
+	const _ = instance.get_();
 	
 	// Both levels should have added their properties to the same object
-	assertEquals(guarded.level1, 'L1');
-	assertEquals(guarded.level2, 'L2');
+	assertEquals(_.level1, 'L1');
+	assertEquals(_.level2, 'L2');
 });

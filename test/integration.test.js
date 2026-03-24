@@ -8,205 +8,205 @@ import { Base } from '../protected-base.js';
 
 Deno.test('Integration - multi-level inheritance with protected properties', () => {
 	class B extends Base {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.propB = 'B';
+			this._get_();
+			this.#_.propB = 'B';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	class C extends B {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.propC = 'C';
+			this._get_();
+			this.#_.propC = 'C';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	const instance = new C();
-	const guarded = instance.getGuarded();
+	const _ = instance.get_();
 
 	// Both B and C should have added their properties
-	assertEquals(guarded.propB, 'B');
-	assertEquals(guarded.propC, 'C');
+	assertEquals(_.propB, 'B');
+	assertEquals(_.propC, 'C');
 });
 
 Deno.test('Integration - protected state cannot be subverted after construction', () => {
 	class B extends Base {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.propB = 'B';
+			this._get_();
+			this.#_.propB = 'B';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	class C extends B {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.propC = 'C';
+			this._get_();
+			this.#_.propC = 'C';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	const instance = new C();
-	const originalGuarded = instance.getGuarded();
+	const original_ = instance.get_();
 
 	// Attempt to subvert protected state (as in demo.js)
 	const subs = new Set();
-	const newGuarded = { updated: true };
-	instance._subGuarded(subs);
+	const new_ = { updated: true };
+	instance._sub_(subs);
 	for (const sub of subs) {
-		sub(newGuarded);
+		sub(new_);
 	}
 
 	// Should still have original values due to ||= operator
-	const currentGuarded = instance.getGuarded();
-	assertEquals(currentGuarded.propB, 'B');
-	assertEquals(currentGuarded.propC, 'C');
-	assertEquals(currentGuarded.updated, undefined);
+	const current_ = instance.get_();
+	assertEquals(current_.propB, 'B');
+	assertEquals(current_.propC, 'C');
+	assertEquals(current_.updated, undefined);
 });
 
 Deno.test('Integration - complex hierarchy with multiple branches', () => {
 	class A extends Base {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.levelA = 'A';
+			this._get_();
+			this.#_.levelA = 'A';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	class B1 extends A {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.levelB1 = 'B1';
+			this._get_();
+			this.#_.levelB1 = 'B1';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	class B2 extends A {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.levelB2 = 'B2';
+			this._get_();
+			this.#_.levelB2 = 'B2';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	const b1Instance = new B1();
 	const b2Instance = new B2();
 
-	const b1Guarded = b1Instance.getGuarded();
-	const b2Guarded = b2Instance.getGuarded();
+	const b1_ = b1Instance.get_();
+	const b2_ = b2Instance.get_();
 
 	// B1 should have A and B1 properties
-	assertEquals(b1Guarded.levelA, 'A');
-	assertEquals(b1Guarded.levelB1, 'B1');
-	assertEquals(b1Guarded.levelB2, undefined);
+	assertEquals(b1_.levelA, 'A');
+	assertEquals(b1_.levelB1, 'B1');
+	assertEquals(b1_.levelB2, undefined);
 
 	// B2 should have A and B2 properties
-	assertEquals(b2Guarded.levelA, 'A');
-	assertEquals(b2Guarded.levelB2, 'B2');
-	assertEquals(b2Guarded.levelB1, undefined);
+	assertEquals(b2_.levelA, 'A');
+	assertEquals(b2_.levelB2, 'B2');
+	assertEquals(b2_.levelB1, undefined);
 });
 
 Deno.test('Integration - protected properties with public and private properties', () => {
 	class Example extends Base {
-		#guarded;
+		#_;
 		#privateField;
 		publicField;
 
 		constructor() {
 			super();
-			this._getGuarded();
+			this._get_();
 			
 			this.publicField = 'public';
-			this.#guarded.protectedField = 'protected';
+			this.#_.protectedField = 'protected';
 			this.#privateField = 'private';
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
 		getProtectedField() {
-			return this.#guarded.protectedField;
+			return this.#_.protectedField;
 		}
 
 		getPrivateField() {
@@ -234,28 +234,28 @@ Deno.test('Integration - protected properties with public and private properties
 
 Deno.test('Integration - cross-instance method calls with protected authentication', () => {
 	class Node extends Base {
-		#guarded;
+		#_;
 
 		constructor(id) {
 			super();
-			this._getGuarded();
-			this.#guarded.id = id;
+			this._get_();
+			this.#_.id = id;
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
 		// Pseudo-protected method
-		connect(guarded, otherNode) {
-			if (guarded !== this.#guarded) throw new Error('Unauthorized');
-			return `Connected ${this.#guarded.id} to ${otherNode.#guarded.id}`;
+		connect(_, otherNode) {
+			if (_ !== this.#_) throw new Error('Unauthorized');
+			return `Connected ${this.#_.id} to ${otherNode.#_.id}`;
 		}
 
 		// Public method that calls protected method
 		connectTo(otherNode) {
-			return this.connect(this.#guarded, otherNode);
+			return this.connect(this.#_, otherNode);
 		}
 	}
 
@@ -268,46 +268,46 @@ Deno.test('Integration - cross-instance method calls with protected authenticati
 
 Deno.test('Integration - protected properties are truly shared across hierarchy', () => {
 	class Level1 extends Base {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
+			this._get_();
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
 		setFromLevel1(key, value) {
-			this.#guarded[key] = value;
+			this.#_[key] = value;
 		}
 
 		getFromLevel1(key) {
-			return this.#guarded[key];
+			return this.#_[key];
 		}
 	}
 
 	class Level2 extends Level1 {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
+			this._get_();
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
 		setFromLevel2(key, value) {
-			this.#guarded[key] = value;
+			this.#_[key] = value;
 		}
 
 		getFromLevel2(key) {
-			return this.#guarded[key];
+			return this.#_[key];
 		}
 	}
 

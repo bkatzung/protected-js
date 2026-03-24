@@ -11,74 +11,75 @@ Deno.test('Base class - should create an instance successfully', () => {
 	assertEquals(instance instanceof Base, true);
 });
 
-Deno.test('Base class - should have _getGuarded method', () => {
+Deno.test('Base class - should have _get_ method', () => {
 	const instance = new Base();
-	assertEquals(typeof instance._getGuarded, 'function');
+	assertEquals(typeof instance._get_, 'function');
 });
 
-Deno.test('Base class - should have _subGuarded method', () => {
+Deno.test('Base class - should have _sub_ method', () => {
 	const instance = new Base();
-	assertEquals(typeof instance._subGuarded, 'function');
+	assertEquals(typeof instance._sub_, 'function');
 });
 
-Deno.test('Base class - should not expose #guarded directly', () => {
+Deno.test('Base class - should not expose #_ directly', () => {
 	const instance = new Base();
-	assertEquals(instance.guarded, undefined);
-	assertEquals(instance['#guarded'], undefined);
+	assertEquals(instance._, undefined);
+	assertEquals(instance['#_'], undefined);
 });
 
-Deno.test('Base class - should distribute guarded properties to subscribers', () => {
+Deno.test('Base class - should distribute protected properties to subscribers', () => {
 	class TestSub extends Base {
-		#guarded;
-		receivedGuarded = null;
+		#_;
+		received_ = null;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.receivedGuarded = this.#guarded;
+			this._get_();
+			this.received_ = this.#_;
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 	}
 
 	const sub = new TestSub();
-	assertExists(sub.receivedGuarded);
-	assertEquals(typeof sub.receivedGuarded, 'object');
+	assertExists(sub.received_);
+	assertEquals(typeof sub.received_, 'object');
 });
 
-Deno.test('Base class - should only set guarded once with ||= operator', () => {
+Deno.test('Base class - should only set protected once with ||= operator', () => {
 	class TestSub extends Base {
-		#guarded;
+		#_;
 
 		constructor() {
 			super();
-			this._getGuarded();
-			this.#guarded.original = true;
+			this._get_();
+			this.#_.original = true;
 		}
 
-		_subGuarded(subs) {
-			super._subGuarded(subs);
-			subs.add((g) => this.#guarded ||= g);
+		_sub_(subs) {
+			super._sub_(subs);
+			subs.add((g) => this.#_ ||= g);
 		}
 
-		getGuarded() {
-			return this.#guarded;
+		get_() {
+			return this.#_;
 		}
 	}
 
 	const sub = new TestSub();
-	assertEquals(sub.getGuarded(), { original: true });
+	assertEquals(sub.get_().original, true);
 	
-	// Try to alter guarded after it's set
+	// Try to alter protected after it's set
 	const newSubs = new Set();
 	const altered = { altered: true };
-	sub._subGuarded(newSubs);
+	sub._sub_(newSubs);
 	for (const newSub of newSubs) {
 		newSub(altered);
 	}
 	// Should still have original value
-	assertEquals(sub.getGuarded(), { original: true });
+	assertEquals(sub.get_().original, true);
+	assertEquals(sub.get_().altered, undefined);
 });
