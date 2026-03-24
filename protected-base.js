@@ -6,49 +6,53 @@
  * Based on https://www.kappacs.com/implementing-javascript-protected-properties
  */
 
-export class Base {
-	#guarded; // Base's private access to shared protected properties
-	#guardedSubs = new Set(); // Protected-property subscriptions (setter functions)
+// NOTE: #_ and #_subs were formerly called #guarded and #guardedSubs
 
-	static protoProtected = { // Base-class prototype for protected shared-state object
+export class Base {
+	#_; // Base's private access to shared protected properties
+	#_subs = new Set(); // Protected-property subscriptions (setter functions)
+
+	static __protected = { // Base-class prototype for protected shared-state object
 		logGuarded () {
-			// when called guarded.logGuarded (or this.#guarded.logGuarded):
-			// `this` will be the protected shared-state object
-			// `this.thys` will be the original object `this`
+			const [thys, _thys] = [this.__this, this];
+			// when called guarded.logGuarded (or this.#_.logGuarded):
+			// `thys` will be the original object `this`
+			// `_thys` will be the protected shared-state object
 			// Optional: verify main-object/protected-state-object association
-			if (this !== this.thys.#guarded) throw new Error('Unauthorized call');
-			console.log('Proto Base?', this.protoBase, 'Proto Sub?', this.protoSub);
-			console.log('Base #guarded:', this);
+			if (_thys !== thys.#_) throw new Error('Unauthorized');
+			console.log('Proto Base?', _thys.protoBase, 'Proto Sub?', _thys.protoSub);
+			console.log('Base #_:', _thys);
 		},
 		get protoBase () { return true; }
 	};
 
 	constructor () {
-		const guarded = this.#guarded = Object.create(this.constructor.protoProtected);
-		guarded.thys = this;
-		guarded.base = true;
-		this._subGuarded(this.#guardedSubs); // Invite subscribers
+		const guarded = this.#_ = Object.assign(Object.create(this.constructor.__protected), {
+			__this: this, // Original this enables unbound, prototyped, protected methods
+			base: true,
+		});
+		this._sub_(this.#_subs); // Invite subscribers
 		// Public props: this.prop
-		// Protected props: this.#guarded.prop (or guarded.prop)
+		// Protected props: this.#_.prop
 		// Private props: this.#prop
 	}
 
 	callProtectedLogger () {
-		this.#guarded.logGuarded();
+		this.#_.logGuarded();
 	}
 
 	// Distribute protected property access to ready subscribers
 	// (base instance method)
-	_getGuarded () {
-		const guarded = this.#guarded, subs = this.#guardedSubs;
+	_get_ () {
+		const guarded = this.#_, subs = this.#_subs;
 		try {
 			for (const sub of subs) {
 				sub(guarded); // Attempt guarded distribution to subscriber
 				subs.delete(sub); // Remove successfully-completed subscriptions
 			}
 		}
-		catch (_) { }
+		catch (_) {/**/}
 	}
 
-	_subGuarded () { } // Stub for new A() and sub-class consistency
+	_sub_ () { } // Base-class stub (required)
 }

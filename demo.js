@@ -1,36 +1,36 @@
-import { Base } from './protected.js';
+import { Base } from './protected-base.js';
 
 class B extends Base {
-	#guarded;
+	#_;
 
 	constructor () {
 		super();
-		this._getGuarded();
-		this.#guarded.propB = 'B';
+		this._get_();
+		this.#_.propB = 'B';
 	}
 
-	_subGuarded (subs) {
-		super._subGuarded(subs);
-		subs.add((g) => this.#guarded ||= g);
+	_sub_ (subs) {
+		super._sub_(subs);
+		subs.add((g) => this.#_ ||= g);
 	}
 
 	logGuarded () {
-		console.log(this.#guarded);
+		console.log(this.#_);
 	}
 }
 
 class C extends B {
-	#guarded;
+	#_;
 
 	constructor () {
 		super();
-		this._getGuarded();
-		this.#guarded.propC = 'C';
+		this._get_();
+		this.#_.propC = 'C';
 	}
 
-	_subGuarded (subs) {
-		super._subGuarded(subs);
-		subs.add((g) => this.#guarded ||= g);
+	_sub_ (subs) {
+		super._sub_(subs);
+		subs.add((p) => this.#_ ||= p);
 	}
 }
 
@@ -40,7 +40,7 @@ instance.logGuarded();
 // Attempt to subvert protected state
 // (should not have any effect)
 const subs = new Set(), newGuarded = { updated: true };
-instance._subGuarded(subs);
+instance._sub_(subs);
 for (const sub of subs) {
 	sub(newGuarded);
 }
