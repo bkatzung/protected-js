@@ -17,6 +17,17 @@ JavaScript doesn't natively support protected properties (properties accessible 
 - **Type Safe**: Works seamlessly with TypeScript
 - **Lightweight**: Minimal overhead with efficient subscription pattern
 
+## Pattern Selection
+
+If you need inheritance-based access, use the "protected-js" pattern. If you need trust or capability-based access, use the "insider-js" pattern.
+
+| Use Case | Pattern |
+|---|---|
+| Subclass access | protected-js |
+| Classical OOP hierarchy | protected-js |
+| Trusted collaboration | insider-js |
+| Composition-heavy design | insider-js |
+
 ## Naming Conventions
 
 - **`#_`**: Private field for accessing the shared protected-state object (formerly `#guarded`)
@@ -28,7 +39,7 @@ JavaScript doesn't natively support protected properties (properties accessible 
 - **`_get_()`**: Method to distribute protected-property access (formerly `_getGuarded()`)
 - **`_sub_()`**: Method to subscribe to protected-property access (formerly `_subGuarded()`)
 
-## Pattern Application
+## Protected Pattern Application
 
 ### Base-Class Pattern
 
@@ -291,7 +302,7 @@ callOtherGuardedMethod (other) {
 
 Works in all modern browsers and Deno / Node.js / etc. environments that support:
 - ES6 Classes
-- Private fields (`#`)
+- ES2022 Private fields (`#`)
 
 ## License
 
@@ -305,3 +316,7 @@ This content is placed in the public domain by the author.
 ## Contributing
 
 This is a pattern demonstration. Feel free to adapt it to your needs or suggest improvements via issues and pull requests.
+
+## Credits
+
+- The new, shorter `#_` naming convention was inspired by this [gist](https://gist.github.com/crisdosaygo/636a40f9e47967cf14b0d4b5ebd68e72) by [crisdosaygo](https://github.com/crisdosaygo/).
