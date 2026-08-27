@@ -8,14 +8,19 @@
 
 // NOTE: #_ and #_subs were formerly called #guarded and #guardedSubs
 
+// Can be exported local, global, exported global, etc. according to preference
+export const _GET = Symbol.for('jsProtectedGet');
+export const _SUB = Symbol.for('jsProtectedSub');
+
 export class Base {
 	#_; // Base's private access to shared protected properties
 	#_subs = new Set(); // Protected-property subscriptions (setter functions)
 
 	static __protected = { // Base-class prototype for protected shared-state object
-		logGuarded () {
+		logState () {
 			const [thys, _thys] = [this.__this, this];
-			// when called guarded.logGuarded (or this.#_.logGuarded):
+
+			// when called state.logState (or this.#_.logState):
 			// `thys` will be the original object `this`
 			// `_thys` will be the protected shared-state object
 			// Optional: verify main-object/protected-state-object association
@@ -27,32 +32,34 @@ export class Base {
 	};
 
 	constructor () {
-		const guarded = this.#_ = Object.assign(Object.create(this.constructor.__protected), {
+		const state = this.#_ = Object.assign(Object.create(this.constructor.__protected), {
 			__this: this, // Original this enables unbound, prototyped, protected methods
 			base: true,
 		});
-		this._sub_(this.#_subs); // Invite subscribers
+
+		this[_SUB](this.#_subs); // Invite subscribers
 		// Public props: this.prop
 		// Protected props: this.#_.prop
 		// Private props: this.#prop
 	}
 
 	callProtectedLogger () {
-		this.#_.logGuarded();
+		this.#_.logState();
 	}
 
 	// Distribute protected property access to ready subscribers
 	// (base instance method)
-	_get_ () {
-		const guarded = this.#_, subs = this.#_subs;
+	[_GET] () {
+		const state = this.#_, subs = this.#_subs;
+
 		try {
 			for (const sub of subs) {
-				sub(guarded); // Attempt guarded distribution to subscriber
+				sub(state); // Attempt state distribution to subscriber
 				subs.delete(sub); // Remove successfully-completed subscriptions
 			}
 		}
 		catch (_) {/**/}
 	}
 
-	_sub_ () { } // Base-class stub (required)
+	[_SUB] () { } // Base-class subscription stub (required)
 }

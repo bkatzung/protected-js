@@ -3,7 +3,7 @@
  */
 
 import { assertEquals, assertExists, assertThrows } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { Base } from '../protected-base.js';
+import { Base, _GET, _SUB } from '../protected-base.js';
 
 // Create a Sub class for testing
 class Sub extends Base {
@@ -11,11 +11,11 @@ class Sub extends Base {
 
 	constructor() {
 		super();
-		this._get_();
+		this[_GET]();
 	}
 
-	_sub_(subs) {
-		super._sub_(subs);
+	[_SUB](subs) {
+		super[_SUB](subs);
 		subs.add((g) => this.#_ ||= g);
 	}
 
@@ -109,11 +109,11 @@ Deno.test('Sub class - can cross-call more-derived (SubSub) instance', () => {
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 	}
@@ -133,11 +133,11 @@ Deno.test('Sub class - SubSub cannot access less-derived Sub #_', () => {
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -166,12 +166,12 @@ Deno.test('Sub class - cross-instance access to protected properties', () => {
 
 		constructor(value) {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.value = value;
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -196,11 +196,11 @@ Deno.test('Sub class - multi-level inheritance', () => {
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -223,12 +223,12 @@ Deno.test('Sub class - protected properties are shared across hierarchy', () => 
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.level1 = 'L1';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -242,12 +242,12 @@ Deno.test('Sub class - protected properties are shared across hierarchy', () => 
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.level2 = 'L2';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 

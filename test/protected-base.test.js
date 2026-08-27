@@ -3,7 +3,7 @@
  */
 
 import { assertEquals, assertExists, assertStrictEquals } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { Base } from '../protected-base.js';
+import { Base, _GET, _SUB } from '../protected-base.js';
 
 Deno.test('Base class - should create an instance successfully', () => {
 	const instance = new Base();
@@ -11,14 +11,14 @@ Deno.test('Base class - should create an instance successfully', () => {
 	assertEquals(instance instanceof Base, true);
 });
 
-Deno.test('Base class - should have _get_ method', () => {
+Deno.test('Base class - should have _GET method', () => {
 	const instance = new Base();
-	assertEquals(typeof instance._get_, 'function');
+	assertEquals(typeof instance[_GET], 'function');
 });
 
-Deno.test('Base class - should have _sub_ method', () => {
+Deno.test('Base class - should have _SUB method', () => {
 	const instance = new Base();
-	assertEquals(typeof instance._sub_, 'function');
+	assertEquals(typeof instance[_SUB], 'function');
 });
 
 Deno.test('Base class - should not expose #_ directly', () => {
@@ -34,12 +34,12 @@ Deno.test('Base class - should distribute protected properties to subscribers', 
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.received_ = this.#_;
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 	}
@@ -55,12 +55,12 @@ Deno.test('Base class - should only set protected once with ||= operator', () =>
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.original = true;
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -75,7 +75,7 @@ Deno.test('Base class - should only set protected once with ||= operator', () =>
 	// Try to alter protected after it's set
 	const newSubs = new Set();
 	const altered = { altered: true };
-	sub._sub_(newSubs);
+	sub[_SUB](newSubs);
 	for (const newSub of newSubs) {
 		newSub(altered);
 	}

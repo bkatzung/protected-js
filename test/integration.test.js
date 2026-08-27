@@ -4,7 +4,7 @@
  */
 
 import { assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
-import { Base } from '../protected-base.js';
+import { Base, _GET, _SUB } from '../protected-base.js';
 
 Deno.test('Integration - multi-level inheritance with protected properties', () => {
 	class B extends Base {
@@ -12,12 +12,12 @@ Deno.test('Integration - multi-level inheritance with protected properties', () 
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.propB = 'B';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -31,12 +31,12 @@ Deno.test('Integration - multi-level inheritance with protected properties', () 
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.propC = 'C';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -59,12 +59,12 @@ Deno.test('Integration - protected state cannot be subverted after construction'
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.propB = 'B';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -78,12 +78,12 @@ Deno.test('Integration - protected state cannot be subverted after construction'
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.propC = 'C';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -98,7 +98,7 @@ Deno.test('Integration - protected state cannot be subverted after construction'
 	// Attempt to subvert protected state (as in demo.js)
 	const subs = new Set();
 	const new_ = { updated: true };
-	instance._sub_(subs);
+	instance[_SUB](subs);
 	for (const sub of subs) {
 		sub(new_);
 	}
@@ -116,12 +116,12 @@ Deno.test('Integration - complex hierarchy with multiple branches', () => {
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.levelA = 'A';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -135,12 +135,12 @@ Deno.test('Integration - complex hierarchy with multiple branches', () => {
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.levelB1 = 'B1';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -154,12 +154,12 @@ Deno.test('Integration - complex hierarchy with multiple branches', () => {
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.levelB2 = 'B2';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -193,15 +193,15 @@ Deno.test('Integration - protected properties with public and private properties
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 			
 			this.publicField = 'public';
 			this.#_.protectedField = 'protected';
 			this.#privateField = 'private';
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -238,12 +238,12 @@ Deno.test('Integration - cross-instance method calls with protected authenticati
 
 		constructor(id) {
 			super();
-			this._get_();
+			this[_GET]();
 			this.#_.id = id;
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -272,11 +272,11 @@ Deno.test('Integration - protected properties are truly shared across hierarchy'
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 
@@ -294,11 +294,11 @@ Deno.test('Integration - protected properties are truly shared across hierarchy'
 
 		constructor() {
 			super();
-			this._get_();
+			this[_GET]();
 		}
 
-		_sub_(subs) {
-			super._sub_(subs);
+		[_SUB](subs) {
+			super[_SUB](subs);
 			subs.add((g) => this.#_ ||= g);
 		}
 

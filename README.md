@@ -36,8 +36,8 @@ If you need inheritance-based access, use the "protected-js" pattern. If you nee
 - **`__this`**: Property on the protected-state object referencing the original instance (formerly `thys`)
 - **`_thys`**: Local variable name for the protected-state object (when `this` refers to it)
 - **`thys`**: Local variable name for the original instance object
-- **`_get_()`**: Method to distribute protected-property access (formerly `_getGuarded()`)
-- **`_sub_()`**: Method to subscribe to protected-property access (formerly `_subGuarded()`)
+- **`[_GET]()`**: Method to distribute protected-property access (formerly `_get_()`, `_getGuarded()`)
+- **`[_SUB]()`**: Method to subscribe to protected-property access (formerly `_sub_()`, `_subGuarded()`)
 
 ## Protected Pattern Application
 
@@ -46,6 +46,10 @@ If you need inheritance-based access, use the "protected-js" pattern. If you nee
 Incorporate the base-class pattern into your base class. Excerpted from [`protected-base.js`](protected-base.js):
 
 ```javascript
+// Can be exported local, global, exported global, etc. according to preference
+export const _GET = Symbol.for('jsProtectedGet');
+export const _SUB = Symbol.for('jsProtectedSub');
+
 // Base-class protected-properties-pattern essentials
 class Base {
 	#_; // Base's private access to shared protected properties
@@ -53,9 +57,10 @@ class Base {
 
 	// Base-class prototype for protected shared-state object
 	static __protected = {
-		logGuarded () {
+		logState () {
 			const [thys, _thys] = [this.__this, this];
-			// when called guarded.logGuarded (or this.#_.logGuarded):
+
+			// when called state.logState (or this.#_.logState):
 			// `thys` will be the original object `this`
 			// `_thys` will be the protected shared-state object
 			// Optional: verify main-object/protected-state-object association
@@ -67,29 +72,31 @@ class Base {
 	};
 
 	constructor () {
-		const guarded = this.#_ = Object.assign(Object.create(this.constructor.__protected), {
+		const state = this.#_ = Object.assign(Object.create(this.constructor.__protected), {
 			__this: this, // Back-reference to the instance
 			base: true, // Protected property
 		});
-		this._sub_(this.#_subs); // Invite sub-class access
+
+		this[_SUB](this.#_subs); // Invite sub-class access
 		// Public props: this.prop
-		// Protected props: this.#_.prop (or guarded.prop)
+		// Protected props: this.#_.prop (or state.prop)
 		// Private props: this.#prop
 	}
 
 	// Distribute protected-property access
-	_get_ () {
-		const guarded = this.#_, subs = this.#_subs;
+	[_GET] () {
+		const state = this.#_, subs = this.#_subs;
+
 		try {
 			for (const sub of subs) {
-				sub(guarded); // Attempt distribution to subscriber
+				sub(state); // Attempt distribution to subscriber
 				subs.delete(sub); // Remove successfully-completed subscriptions
 			}
 		}
 		catch (_) { }
 	}
 
-	_sub_ () { } // Base-class stub
+	[_SUB] () { } // Base-class stub
 }
 ```
 
@@ -104,11 +111,12 @@ class Sub extends Base {
 
 	// Sub-class prototype for protected shared-state object
 	static __protected = Object.setPrototypeOf({
-		logGuarded () {
+		logState () {
 			const [thys, _thys] = [this.__this, this];
+
 			if (_thys !== thys.#_) throw new Error('Unauthorized');
 			console.log('Sub #_', this);
-			super.logGuarded(); // Call parent's protected method
+			super.logState(); // Call parent's protected method
 		},
 		get protoSub () { return true; }
 	}, super.__protected);
@@ -116,15 +124,16 @@ class Sub extends Base {
 	constructor () {
 		super();
 		// <-- Sub's this.#_ no longer throws
-		this._get_(); // Obtain protected-property access
+		this[_GET](); // Obtain protected-property access
 		// <-- Sub's this.#_ is now populated and available for use
-		const guarded = this.#_;
-		guarded.sub = true; // Protected property
+		const state = this.#_;
+
+		state.sub = true; // Protected property
 	}
 
 	// Subscribe to #_ protected properties
-	_sub_ (subs) {
-		super._sub_(subs); // Must be first
+	[_SUB] (subs) {
+		super[_SUB](subs); // Must be first
 		subs.add((p) => this.#_ ||= p); // Set this.#_ once
 	}
 }
@@ -156,11 +165,12 @@ class Sub extends Base {
 
 // Conceptual structure (not strictly valid syntax)
 const instance = new Sub();
-const guarded = instance.#_;
-guarded.baseMethod();  // Inherited from Base
-guarded.subMethod();   // Defined in Sub
-console.log(guarded.protoBase);  // true (inherited)
-console.log(guarded.protoSub);   // true (own property)
+const state = instance.#_;
+
+state.baseMethod();  // Inherited from Base
+state.subMethod();   // Defined in Sub
+console.log(state.protoBase);  // true (inherited)
+console.log(state.protoSub);   // true (own property)
 ```
 
 ## Cross-Instance Protected Access
@@ -175,9 +185,10 @@ class Sub extends Base {
 	// Note that this won't work with a new Base() instance because such an instance
 	// has a Base #_ (inaccessible to Sub methods) but not a Sub #_.
 	compareWith (otherNode) {
-		const guarded = this.#_; // Sub-level #_ of this instance
-		const otherGuarded = otherNode.#_; // Sub-level #_ of otherNode
-		return guarded.value === otherGuarded.value;
+		const state = this.#_; // Sub-level #_ of this instance
+		const otherState = otherNode.#_; // Sub-level #_ of otherNode
+
+		return state.value === otherState.value;
 	}
 }
 ```
@@ -190,9 +201,9 @@ The pattern uses four key mechanisms:
 
 2. **Private Fields (`#_`)**: Each class in the hierarchy has its own private `#_` field that references the same shared protected-state object. This ensures protected properties are accessible within the class hierarchy but not from outside.
 
-3. **Subscription Pattern**: Subclasses subscribe to receive the protected shared-state object through the `_sub_()` method. The base class collects these subscriptions during construction.
+3. **Subscription Pattern**: Subclasses subscribe to receive the protected shared-state object through the `[_SUB]()` method. The base class collects these subscriptions during construction.
 
-4. **Distribution**: The base class distributes the protected shared-state object to all subscribers via `_get_()`, which must be called in each subclass constructor after `super()`.
+4. **Distribution**: The base class distributes the protected shared-state object to all subscribers via `[_GET]()`, which must be called in each subclass constructor after `super()`.
 
 ### The `__this` Back-Reference
 
@@ -200,8 +211,9 @@ The shared-state object includes a `__this` property that references back to the
 
 ```javascript
 static __protected = {
-	logGuarded () {
+	logState () {
 		const [thys, _thys] = [this.__this, this];
+
 		// `thys` is the original instance
 		// `_thys` is the protected shared-state object
 		// Optional: verify main-object/protected-state-object association
@@ -222,6 +234,7 @@ class Example extends Base {
 		// Protected method on prototype
 		protectedMethod () {
 			const [thys, _thys] = [this.__this, this];
+
 			// Access protected properties via `_thys` (the shared-state object)
 			console.log('Protected value:', _thys.protectedField);
 			// Access instance via `thys`
@@ -231,15 +244,16 @@ class Example extends Base {
 
 	constructor () {
 		super();
-		this._get_();
-		const guarded = this.#_;
+		this[_GET]();
+
+		const state = this.#_;
 
 		this.publicField = 'public';           // Public: accessible everywhere
-		guarded.protectedField = 'protected';  // Protected: accessible in hierarchy
+		state.protectedField = 'protected';  // Protected: accessible in hierarchy
 		this.#privateField = 'private';        // Private: only in this class
 
 		// Call protected method
-		guarded.protectedMethod();
+		state.protectedMethod();
 	}
 }
 ```
@@ -252,9 +266,10 @@ Protected methods can be defined on the `__protected` static property. These met
 
 ```javascript
 static __protected = {
-	// Protected method accessible via guarded.protectedMethod()
+	// Protected method accessible via state.protectedMethod()
 	protectedMethod () {
 		const [thys, _thys] = [this.__this, this];
+
 		// `_thys` is the shared-state object
 		console.log('Protected property:', _thys.protectedField);
 		// Access instance via `thys`
@@ -270,30 +285,29 @@ someMethod () {
 
 ### Pseudo-Protected Methods
 
-Pseudo-protected methods are publicly-visible methods that require the caller to pass the shared-state object to verify authenticity. This pattern is useful when you need a method to be callable from outside but want to restrict access:
+Pseudo-protected ("gated") methods are publicly-visible methods that require the caller to pass the shared-state object to verify authenticity. This pattern is useful when you need a method to be callable from outside but want to restrict access:
 
 ```javascript
 // Pseudo-protected method (publicly visible but access-controlled)
-guardedMethod (guarded) {
-	if (guarded !== this.#_) throw new Error('Unauthorized method call');
+gatedMethod (state) {
+	if (state !== this.#_) throw new Error('Unauthorized method call');
 	// Caller is confirmed to be in the class hierarchy for this instance
 }
 
 // A method at any class level can call a pseudo-protected method on its own instance
 // (the #_ of each class refers to the same shared object)
-callGuardedMethod () {
-	this.guardedMethod(this.#_);
+callGatedMethod () {
+	this.gatedMethod(this.#_);
 }
 
 // A method can also call a pseudo-protected method on another instance
 // if the other instance is instanceof the calling method's class
 // (A method in a more-derived sub-class cannot protected-call a less-derived instance)
-callOtherGuardedMethod (other) {
-	try {
-		const otherGuarded = other.#_; // Throws if other is incompatible
-		other.guardedMethod(otherGuarded);
-	} catch (_err) {
-		// TypeError thrown if other is incompatible
+callOtherGatedMethod (other) {
+	if (#_ in other) { // brand check
+		other.gatedMethod(other.#_);
+	} else {
+		// Incompatible
 	}
 }
 ```

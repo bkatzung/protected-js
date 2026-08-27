@@ -3,18 +3,19 @@
  * Author: Brian Katzung <briank@kappacs.com>
  */
 
-import { Base } from './protected-base.js';
+import { Base, _GET, _SUB } from './protected-base.js';
 
 export class Sub extends Base {
 	#_; // Sub's private access to shared protected properties
 
 	// Sub-class prototype for protected shared-state object
 	static __protected = Object.setPrototypeOf({
-		logGuarded () {
+		logState () {
 			const [thys, _thys] = [this.__this, this];
+
 			if (_thys !== thys.#_) throw new Error('Unauthorized');
 			console.log('Sub #_', this);
-			super.logGuarded();
+			super.logState();
 		},
 		get protoSub () { return true; }
 	}, super.__protected);
@@ -22,23 +23,26 @@ export class Sub extends Base {
 	constructor () {
 		super();
 		// <-- Sub's this.#_ no longer throws
-		this._get_(); // Obtain protected property access
+		this[_GET](); // Obtain protected property access
 		// <-- Sub's this.#_ is now populated and available for use
-		const guarded = this.#_;
-		guarded.sub = true;
+
+		const state = this.#_;
+
+		state.sub = true;
 	}
 
 	// Subscribe to #_ in every sub-class needing access
 	// protected properties
-	_sub_ (subs) {
-		super._sub_(subs); // Must be first
+	[_SUB] (subs) {
+		super[_SUB](subs); // Must be first
 		subs.add((p) => this.#_ ||= p); // Set this.#_ once
 	}
 
 	method () { // Example consumer
-		const guarded = this.#_;
+		const state = this.#_;
+
 		// Public props: this.prop
-		// Protected props: this.#_.prop (or guarded.prop)
+		// Protected props: this.#_.prop (or state.prop)
 		// Private props: this.#prop
 	}
 
@@ -50,20 +54,22 @@ export class Sub extends Base {
 	 * instanceof the caller's method class (in which case the caller has
 	 * access to the callee's #_ and can therefore pass it).
 	 */
-	guardedMethod (guarded) {
-		if (guarded !== this.#_) throw new Error('Unauthorized method call');
+	gatedMethod (state) {
+		if (state !== this.#_) throw new Error('Unauthorized method call');
 		// Caller is now confirmed to be in the class hierarchy for this instance
 	}
 
 	// Example of calling a pseudo-protected method on the same instance
-	callGuardedMethod () {
-		const guarded = this.#_;
-		this.guardedMethod(guarded);
+	callGatedMethod () {
+		this.gatedMethod(this.#_);
 	}
 
 	// Example of calling a pseudo-protected method across instances
-	callOtherGuardedMethod (other) {
-		const otherGuarded = other.#_; // Throws if other is incompatible
-		other.guardedMethod(otherGuarded);
+	callOtherGatedMethod (other) {
+		if (#_ in other) { // brand check
+			other.gatedMethod(other.#_);
+		} else {
+			// Incompatible
+		}
 	}
 }
