@@ -1,5 +1,7 @@
 import { Base, _GET, _SUB } from './protected-base.js';
 
+let savedSubFn, savedSubToken;
+
 class B extends Base {
 	#_;
 
@@ -30,6 +32,9 @@ class C extends B {
 
 	[_SUB] (subFn) {
 		const subToken = super[_SUB](subFn);
+		// Stash subFn and subToken to attempt post-construction subscription
+		savedSubFn = subFn;
+		savedSubToken = subToken;
 		return subFn(subToken, (p) => { this.#_ ||= p; });
 	}
 }
@@ -37,7 +42,7 @@ class C extends B {
 const instance = new C();
 instance.logState();
 
-// Attempt to subvert protected state
+// Attempt to subvert protected state via direct [_SUB] call
 // (should fail and throw Unauthorized)
 try {
 	const newState = { updated: true };
@@ -45,7 +50,17 @@ try {
 		cb(newState);
 	});
 } catch (e) {
-	console.log('Subversion attempt failed as expected:', e.message);
+	console.log('Direct subversion attempt failed as expected:', e.message);
+}
+
+// Attempt to register a new subscription using subFn + subToken saved during construction
+// (should fail and throw Unauthorized because #_subToken is cleared after construction)
+try {
+	savedSubFn(savedSubToken, (state) => {
+		state.leaked = true;
+	});
+} catch (e) {
+	console.log('Saved subFn+subToken subscription attempt failed as expected:', e.message);
 }
 
 // Should report same original values

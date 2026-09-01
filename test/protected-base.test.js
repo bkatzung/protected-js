@@ -180,3 +180,74 @@ Deno.test('Base class - Base, Base.prototype, and Base.__protected are frozen', 
 	assertEquals(Object.isFrozen(Base.prototype), true);
 	assertEquals(Object.isFrozen(Base.__protected), true);
 });
+
+Deno.test('Base class - subFn and subToken saved during construction reject new subscriptions once constructor completes', () => {
+	let savedSubFn;
+	let savedSubToken;
+
+	class CaptureSub extends Base {
+		#_;
+
+		constructor() {
+			super();
+			this[_GET]();
+		}
+
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			savedSubFn = subFn;
+			savedSubToken = subToken;
+			return subFn(subToken, (g) => { this.#_ ||= g; });
+		}
+
+		get_() {
+			return this.#_;
+		}
+	}
+
+	const instance = new CaptureSub();
+	assertExists(savedSubFn);
+	assertExists(savedSubToken);
+
+	// Attempting to subscribe after construction with saved subFn + saved subToken must throw
+	assertThrows(
+		() => savedSubFn(savedSubToken, () => {}),
+		Error,
+		'Unauthorized'
+	);
+
+	// Attempting with null, undefined, or new Symbol must also throw
+	assertThrows(
+		() => savedSubFn(null, () => {}),
+		Error,
+		'Unauthorized'
+	);
+	assertThrows(
+		() => savedSubFn(undefined, () => {}),
+		Error,
+		'Unauthorized'
+	);
+	assertThrows(
+		() => savedSubFn(Symbol(), () => {}),
+		Error,
+		'Unauthorized'
+	);
+
+	// Calling Base.prototype[_SUB] directly post-construction returns null because #_subToken is null
+	assertEquals(Base.prototype[_SUB].call(instance, savedSubFn), null);
+
+	// Calling instance[_SUB] post-construction throws because subclass [_SUB] tries to invoke subFn(null, ...)
+	assertThrows(
+		() => instance[_SUB](savedSubFn),
+		Error,
+		'Unauthorized'
+	);
+
+	// Verify that protected state is unchanged and no leaked callback runs on subsequent _GET()
+	let leaked = false;
+	try {
+		savedSubFn(savedSubToken, () => { leaked = true; });
+	} catch (_) {/**/}
+	instance[_GET]();
+	assertEquals(leaked, false);
+});

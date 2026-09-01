@@ -51,11 +51,14 @@ export class Base {
 		Object.defineProperty(state, '__this', { value: this });
 
 		this.#_subFn = (token, callback) => {
-			if (token !== this.#_subToken) throw new Error('Unauthorized');
+			const subToken = this.#_subToken;
+
+			if (!subToken || token !== subToken) throw new Error('Unauthorized');
 			this.#_subs.add(callback);
 			return token;
 		};
 		this[_SUB](this.#_subFn); // Invite subscribers
+		this.#_subToken = null; // Prohibit additional subscriptions
 		// Public props: this.prop
 		// Protected props: this.#_.prop
 		// Private props: this.#prop

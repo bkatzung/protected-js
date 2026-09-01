@@ -64,6 +64,9 @@ Deno.test('Integration - multi-level inheritance with protected properties', () 
 });
 
 Deno.test('Integration - protected state cannot be subverted after construction', () => {
+	let savedSubFn;
+	let savedSubToken;
+
 	class B extends Base {
 		#_;
 
@@ -94,6 +97,8 @@ Deno.test('Integration - protected state cannot be subverted after construction'
 
 		[_SUB](subFn) {
 			const subToken = super[_SUB](subFn);
+			savedSubFn = subFn;
+			savedSubToken = subToken;
 			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
@@ -105,19 +110,33 @@ Deno.test('Integration - protected state cannot be subverted after construction'
 	const instance = new C();
 	const original_ = instance.get_();
 
-	// Attempt to subvert protected state (as in demo.js)
+	// Attempt to subvert protected state via direct [_SUB] (as in demo.js)
 	const new_ = { updated: true };
-	let caught = false;
+	let caughtDirect = false;
 	try {
 		instance[_SUB]((_token, cb) => {
 			cb(new_);
 		});
 	} catch (_) {
-		caught = true;
+		caughtDirect = true;
 	}
-	assertEquals(caught, true);
+	assertEquals(caughtDirect, true);
 
-	// Should still have original values due to ||= operator
+	// Attempt to subvert protected state via saved subFn+subToken (as in demo.js)
+	let caughtSaved = false;
+	try {
+		savedSubFn(savedSubToken, (state) => {
+			state.updated = true;
+		});
+	} catch (_) {
+		caughtSaved = true;
+	}
+	assertEquals(caughtSaved, true);
+
+	// Attempt to distribute again
+	instance[_GET]();
+
+	// Should still have original values due to ||= operator and rejection of post-construction subscriptions
 	const current_ = instance.get_();
 	assertEquals(current_.propB, 'B');
 	assertEquals(current_.propC, 'C');

@@ -322,3 +322,43 @@ Deno.test('Exported Sub class - Sub, Sub.prototype, and Sub.__protected are froz
 	assertEquals(Object.isFrozen(ExportedSub.prototype), true);
 	assertEquals(Object.isFrozen(ExportedSub.__protected), true);
 });
+
+Deno.test('Sub class - subFn and subToken saved during construction reject new subscriptions once constructor completes', () => {
+	let savedSubFn;
+	let savedSubToken;
+
+	class StashingSub extends Sub {
+		#_;
+
+		constructor() {
+			super();
+			this[_GET]();
+		}
+
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			savedSubFn = subFn;
+			savedSubToken = subToken;
+			return subFn(subToken, (g) => { this.#_ ||= g; });
+		}
+	}
+
+	const instance = new StashingSub();
+	assertExists(savedSubFn);
+	assertExists(savedSubToken);
+
+	// Invoking savedSubFn with savedSubToken after constructor has completed must throw Unauthorized
+	assertThrows(
+		() => savedSubFn(savedSubToken, () => {}),
+		Error,
+		'Unauthorized'
+	);
+
+	// Subsequent _GET call does not leak protected state
+	let leaked = false;
+	try {
+		savedSubFn(savedSubToken, () => { leaked = true; });
+	} catch (_) {/**/}
+	instance[_GET]();
+	assertEquals(leaked, false);
+});

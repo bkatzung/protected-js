@@ -82,11 +82,14 @@ export class Base {
 		Object.defineProperty(state, '__this', { value: this });
 
 		this.#_subFn = (token, callback) => {
-			if (token !== this.#_subToken) throw new Error('Unauthorized');
+			const subToken = this.#_subToken;
+
+			if (!subToken || token !== subToken) throw new Error('Unauthorized');
 			this.#_subs.add(callback);
 			return token;
 		};
 		this[_SUB](this.#_subFn); // Invite subscribers
+		this.#_subToken = null; // Prohibit additional subscriptions
 		// Public props: this.prop
 		// Protected props: this.#_.prop
 		// Private props: this.#prop
@@ -264,7 +267,7 @@ The pattern uses four key mechanisms:
 
 2. **Private Fields (`#_`)**: Each class in the hierarchy has its own private `#_` field that references the same shared protected-state object. This ensures protected properties are accessible within the class hierarchy but not from outside.
 
-3. **Tokenized Subscription Pattern**: During instantiation, the `Base` constructor creates a subscriber registration function (`#_subFn`) protected by a private token (`#_subToken`), and passes `#_subFn` to `this[_SUB]()`. Each subclass in the chain delegates to `super[_SUB](subFn)` to acquire the valid verification token and registers its private field setter via `return subFn(subToken, (p) => { this.#_ ||= p; });`. External callers cannot subvert `[_SUB]()` because `Base` validates the subscriber function and rejects unauthorized callers.
+3. **Tokenized Subscription Pattern**: During instantiation, the `Base` constructor creates a subscriber registration function (`#_subFn`) protected by a private token (`#_subToken`), and passes `#_subFn` to `this[_SUB]()`. Each subclass in the chain delegates to `super[_SUB](subFn)` to acquire the valid verification token (simultaneously enforcing correct order of operations) and registers its private field setter via `return subFn(subToken, (p) => { this.#_ ||= p; });`. Once subscriber invitation completes, `#_subToken` is set to `null` to prohibit any additional subscriptions, preventing saved `subFn` and `subToken` references from accepting new subscriptions post-construction. External callers cannot subvert `[_SUB]()` because `Base` validates the subscriber function and rejects unauthorized callers.
 
 4. **Distribution**: When subclasses call `this[_GET]()` in their constructors after `super()`, `Base` distributes the protected shared-state object to all registered subscribers and removes the completed subscriptions.
 
