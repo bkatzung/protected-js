@@ -6,6 +6,16 @@
 import { assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import { Base, _GET, _SUB } from '../protected-base.js';
 
+// Make sure tests pass with optional environmental hardening
+if (!Object.isFrozen(Object)) {
+	Object.freeze(Object);
+	Object.freeze(Object.prototype);
+	Object.freeze(Set);
+	Object.freeze(Set.prototype);
+	Object.freeze(Symbol);
+	Object.freeze(Function.prototype);
+}
+
 Deno.test('Integration - multi-level inheritance with protected properties', () => {
 	class B extends Base {
 		#_;
@@ -16,9 +26,9 @@ Deno.test('Integration - multi-level inheritance with protected properties', () 
 			this.#_.propB = 'B';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		get_() {
@@ -35,9 +45,9 @@ Deno.test('Integration - multi-level inheritance with protected properties', () 
 			this.#_.propC = 'C';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		get_() {
@@ -63,9 +73,9 @@ Deno.test('Integration - protected state cannot be subverted after construction'
 			this.#_.propB = 'B';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		get_() {
@@ -82,9 +92,9 @@ Deno.test('Integration - protected state cannot be subverted after construction'
 			this.#_.propC = 'C';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		get_() {
@@ -96,12 +106,16 @@ Deno.test('Integration - protected state cannot be subverted after construction'
 	const original_ = instance.get_();
 
 	// Attempt to subvert protected state (as in demo.js)
-	const subs = new Set();
 	const new_ = { updated: true };
-	instance[_SUB](subs);
-	for (const sub of subs) {
-		sub(new_);
+	let caught = false;
+	try {
+		instance[_SUB]((_token, cb) => {
+			cb(new_);
+		});
+	} catch (_) {
+		caught = true;
 	}
+	assertEquals(caught, true);
 
 	// Should still have original values due to ||= operator
 	const current_ = instance.get_();
@@ -120,9 +134,9 @@ Deno.test('Integration - complex hierarchy with multiple branches', () => {
 			this.#_.levelA = 'A';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		get_() {
@@ -139,9 +153,9 @@ Deno.test('Integration - complex hierarchy with multiple branches', () => {
 			this.#_.levelB1 = 'B1';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		get_() {
@@ -158,9 +172,9 @@ Deno.test('Integration - complex hierarchy with multiple branches', () => {
 			this.#_.levelB2 = 'B2';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		get_() {
@@ -200,9 +214,9 @@ Deno.test('Integration - protected properties with public and private properties
 			this.#privateField = 'private';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		getProtectedField() {
@@ -242,9 +256,9 @@ Deno.test('Integration - cross-instance method calls with protected authenticati
 			this.#_.id = id;
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		// Pseudo-protected method
@@ -275,9 +289,9 @@ Deno.test('Integration - protected properties are truly shared across hierarchy'
 			this[_GET]();
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		setFromLevel1(key, value) {
@@ -297,9 +311,9 @@ Deno.test('Integration - protected properties are truly shared across hierarchy'
 			this[_GET]();
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		setFromLevel2(key, value) {

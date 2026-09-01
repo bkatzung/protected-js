@@ -1,10 +1,10 @@
 # protected-js
 
-A pattern for implementing protected properties and methods in native JavaScript using ES2022 private fields and shared-state objects.
+A pattern for simulating protected properties and methods in native JavaScript using ES2022 private fields and shared-state objects.
 
 ## Overview
 
-JavaScript doesn't natively support protected properties (properties accessible within a class hierarchy but not from outside). This library provides a sophisticated pattern to implement protected properties and methods using JavaScript's private fields (`#`), a subscription-based distribution system, and a shared-state object with prototype inheritance.
+JavaScript doesn't natively support protected properties (properties accessible within a class hierarchy but not from outside). This library provides a sophisticated pattern to simulate protected properties and methods using JavaScript's private fields (`#`), a subscription-based distribution system, and a shared-state object with prototype inheritance.
 
 ## Features
 
@@ -31,9 +31,11 @@ If you need inheritance-based access, use the "protected-js" pattern. If you nee
 ## Naming Conventions
 
 - **`#_`**: Private field for accessing the shared protected-state object (formerly `#guarded`)
-- **`#_subs`**: Private field for protected-property subscriptions (formerly `#guardedSubs`)
+- **`#_subs`**: Private field for protected-property subscriptions (Set of callback functions; formerly `#guardedSubs`)
+- **`#_subFn`**: Private field holding the subscriber registration callback function
+- **`#_subToken`**: Private field holding the subscription verification token `Symbol`
 - **`__protected`**: Static property defining the protected prototype (formerly `protoProtected`)
-- **`__this`**: Property on the protected-state object referencing the original instance (formerly `thys`)
+- **`__this`**: Non-enumerable property on the protected-state object referencing the original instance (formerly `thys`)
 - **`_thys`**: Local variable name for the protected-state object (when `this` refers to it)
 - **`thys`**: Local variable name for the original instance object
 - **`[_GET]()`**: Method to distribute protected-property access (formerly `_get_()`, `_getGuarded()`)
@@ -47,16 +49,17 @@ Incorporate the base-class pattern into your base class. Excerpted from [`protec
 
 ```javascript
 // Can be exported local, global, exported global, etc. according to preference
+// (These are for collision avoidance, not any part of security)
 export const _GET = Symbol.for('jsProtectedGet');
 export const _SUB = Symbol.for('jsProtectedSub');
 
-// Base-class protected-properties-pattern essentials
-class Base {
+export class Base {
 	#_; // Base's private access to shared protected properties
 	#_subs = new Set(); // Protected-property subscriptions (setter functions)
+	#_subFn;
+	#_subToken = Symbol();
 
-	// Base-class prototype for protected shared-state object
-	static __protected = {
+	static __protected = Object.freeze({ // Base-class prototype for protected shared-state object
 		logState () {
 			const [thys, _thys] = [this.__this, this];
 
@@ -69,35 +72,53 @@ class Base {
 			console.log('Base #_:', _thys);
 		},
 		get protoBase () { return true; }
-	};
+	});
 
 	constructor () {
 		const state = this.#_ = Object.assign(Object.create(this.constructor.__protected), {
-			__this: this, // Back-reference to the instance
-			base: true, // Protected property
+			base: true,
 		});
+		// Original this enables unbound, prototyped, protected methods
+		Object.defineProperty(state, '__this', { value: this });
 
-		this[_SUB](this.#_subs); // Invite sub-class access
+		this.#_subFn = (token, callback) => {
+			if (token !== this.#_subToken) throw new Error('Unauthorized');
+			this.#_subs.add(callback);
+			return token;
+		};
+		this[_SUB](this.#_subFn); // Invite subscribers
 		// Public props: this.prop
-		// Protected props: this.#_.prop (or state.prop)
+		// Protected props: this.#_.prop
 		// Private props: this.#prop
 	}
 
-	// Distribute protected-property access
+	callProtectedLogger () {
+		this.#_.logState();
+	}
+
+	// Distribute protected property access to ready subscribers
+	// (base instance method)
 	[_GET] () {
 		const state = this.#_, subs = this.#_subs;
 
 		try {
 			for (const sub of subs) {
-				sub(state); // Attempt distribution to subscriber
+				sub(state); // Attempt state distribution to subscriber
 				subs.delete(sub); // Remove successfully-completed subscriptions
 			}
 		}
-		catch (_) { }
+		catch (_) {/**/}
 	}
 
-	[_SUB] () { } // Base-class stub
+	[_SUB] (subFn) {
+		// Return the verification token if the subscriber function matches
+		if (subFn !== this.#_subFn) throw new Error('Unauthorized');
+		return this.#_subToken;
+	}
 }
+
+Object.freeze(Base.prototype);
+Object.freeze(Base);
 ```
 
 ### Sub-Class Pattern
@@ -105,38 +126,80 @@ class Base {
 Incorporate the sub-class pattern into your sub-classes. Excerpted from [`protected-sub.js`](protected-sub.js):
 
 ```javascript
-// Sub-class protected-properties-pattern essentials
-class Sub extends Base {
+import { Base, _GET, _SUB } from './protected-base.js';
+
+export class Sub extends Base {
 	#_; // Sub's private access to shared protected properties
 
 	// Sub-class prototype for protected shared-state object
-	static __protected = Object.setPrototypeOf({
+	static __protected = Object.freeze(Object.setPrototypeOf({
 		logState () {
 			const [thys, _thys] = [this.__this, this];
 
 			if (_thys !== thys.#_) throw new Error('Unauthorized');
 			console.log('Sub #_', this);
-			super.logState(); // Call parent's protected method
+			super.logState();
 		},
 		get protoSub () { return true; }
-	}, super.__protected);
+	}, super.__protected));
 
 	constructor () {
 		super();
 		// <-- Sub's this.#_ no longer throws
-		this[_GET](); // Obtain protected-property access
+		this[_GET](); // Obtain protected property access
 		// <-- Sub's this.#_ is now populated and available for use
+
 		const state = this.#_;
 
-		state.sub = true; // Protected property
+		state.sub = true;
 	}
 
-	// Subscribe to #_ protected properties
-	[_SUB] (subs) {
-		super[_SUB](subs); // Must be first
-		subs.add((p) => this.#_ ||= p); // Set this.#_ once
+	// Subscribe to #_ in every sub-class needing access
+	// protected properties
+	[_SUB] (subFn) {
+		const subToken = super[_SUB](subFn); // Must be first
+
+		return subFn(subToken, (p) => { this.#_ ||= p; }); // Set this.#_ once
+	}
+
+	method () { // Example consumer
+		const state = this.#_;
+
+		// Public props: this.prop
+		// Protected props: this.#_.prop (or state.prop)
+		// Private props: this.#prop
+	}
+
+	/*
+	 * A pseudo-protected (publicly visible, but access-controlled) method.
+	 * Callers must supply the callee's private #_ to authenticate.
+	 * This can be called from any class within the same instance (#_
+	 * is shared across all classes), or across instances when the callee is
+	 * instanceof the caller's method class (in which case the caller has
+	 * access to the callee's #_ and can therefore pass it).
+	 */
+	gatedMethod (state) {
+		if (state !== this.#_) throw new Error('Unauthorized method call');
+		// Caller is now confirmed to be in the class hierarchy for this instance
+	}
+
+	// Example of calling a pseudo-protected method on the same instance
+	callGatedMethod () {
+		this.gatedMethod(this.#_);
+	}
+
+	// Example of calling a pseudo-protected method across instances
+	callOtherGatedMethod (other) {
+		if (#_ in other) { // brand check
+			other.gatedMethod(other.#_);
+		} else {
+			// Incompatible
+		}
 	}
 }
+
+Object.freeze(Sub.prototype);
+Object.freeze(Sub);
 ```
 
 ## Prototype Chain Inheritance
@@ -146,21 +209,21 @@ The shared-state object has a prototype chain that mirrors the class hierarchy. 
 ```javascript
 // Base class
 class Base {
-	static __protected = {
+	static __protected = Object.freeze({
 		baseMethod () { console.log('Base method'); },
 		get protoBase () { return true; }
-	};
+	});
 }
 
 // Sub class extends the prototype
 class Sub extends Base {
-	static __protected = Object.setPrototypeOf({
+	static __protected = Object.freeze(Object.setPrototypeOf({
 		subMethod () {
 			super.baseMethod(); // Call parent's protected method
 			console.log('Sub method');
 		},
 		get protoSub () { return true; }
-	}, super.__protected);
+	}, super.__protected));
 }
 
 // Conceptual structure (not strictly valid syntax)
@@ -201,16 +264,16 @@ The pattern uses four key mechanisms:
 
 2. **Private Fields (`#_`)**: Each class in the hierarchy has its own private `#_` field that references the same shared protected-state object. This ensures protected properties are accessible within the class hierarchy but not from outside.
 
-3. **Subscription Pattern**: Subclasses subscribe to receive the protected shared-state object through the `[_SUB]()` method. The base class collects these subscriptions during construction.
+3. **Tokenized Subscription Pattern**: During instantiation, the `Base` constructor creates a subscriber registration function (`#_subFn`) protected by a private token (`#_subToken`), and passes `#_subFn` to `this[_SUB]()`. Each subclass in the chain delegates to `super[_SUB](subFn)` to acquire the valid verification token and registers its private field setter via `return subFn(subToken, (p) => { this.#_ ||= p; });`. External callers cannot subvert `[_SUB]()` because `Base` validates the subscriber function and rejects unauthorized callers.
 
-4. **Distribution**: The base class distributes the protected shared-state object to all subscribers via `[_GET]()`, which must be called in each subclass constructor after `super()`.
+4. **Distribution**: When subclasses call `this[_GET]()` in their constructors after `super()`, `Base` distributes the protected shared-state object to all registered subscribers and removes the completed subscriptions.
 
 ### The `__this` Back-Reference
 
-The shared-state object includes a `__this` property that references back to the original instance. This allows protected methods defined on the prototype to access the instance's private fields:
+The shared-state object includes a non-enumerable `__this` property that references back to the original instance. This allows protected methods defined on the prototype to access the instance and verify authentication:
 
 ```javascript
-static __protected = {
+static __protected = Object.freeze({
 	logState () {
 		const [thys, _thys] = [this.__this, this];
 
@@ -220,7 +283,7 @@ static __protected = {
 		if (_thys !== thys.#_) throw new Error('Unauthorized');
 		console.log('Protected state:', _thys);
 	}
-};
+});
 ```
 
 ## Property and Method Access Levels
@@ -230,7 +293,7 @@ class Example extends Base {
 	#_;
 	#privateField;  // Private: only accessible in this class
 
-	static __protected = Object.setPrototypeOf({
+	static __protected = Object.freeze(Object.setPrototypeOf({
 		// Protected method on prototype
 		protectedMethod () {
 			const [thys, _thys] = [this.__this, this];
@@ -240,7 +303,7 @@ class Example extends Base {
 			// Access instance via `thys`
 			console.log('Instance:', thys);
 		}
-	}, super.__protected);
+	}, super.__protected));
 
 	constructor () {
 		super();
@@ -249,13 +312,21 @@ class Example extends Base {
 		const state = this.#_;
 
 		this.publicField = 'public';           // Public: accessible everywhere
-		state.protectedField = 'protected';  // Protected: accessible in hierarchy
+		state.protectedField = 'protected';    // Protected: accessible in hierarchy
 		this.#privateField = 'private';        // Private: only in this class
 
 		// Call protected method
 		state.protectedMethod();
 	}
+
+	[_SUB] (subFn) {
+		const subToken = super[_SUB](subFn);
+		return subFn(subToken, (p) => { this.#_ ||= p; });
+	}
 }
+
+Object.freeze(Example.prototype);
+Object.freeze(Example);
 ```
 
 ## Protected Methods vs Pseudo-Protected Methods
@@ -265,7 +336,7 @@ class Example extends Base {
 Protected methods can be defined on the `__protected` static property. These methods are accessible through the shared-state object and can access protected properties directly:
 
 ```javascript
-static __protected = {
+static __protected = Object.freeze({
 	// Protected method accessible via state.protectedMethod()
 	protectedMethod () {
 		const [thys, _thys] = [this.__this, this];
@@ -275,7 +346,7 @@ static __protected = {
 		// Access instance via `thys`
 		const instance = thys;
 	}
-};
+});
 
 // Call from any method in the hierarchy
 someMethod () {
@@ -312,6 +383,41 @@ callOtherGatedMethod (other) {
 }
 ```
 
+## Security and Execution Environment Integrity
+
+The security of this protected-properties pattern relies on **execution environment integrity**. In JavaScript, private fields (`#field`) are enforced by the JavaScript engine, but the pattern orchestrates sharing using standard runtime built-ins.
+
+### Environmental Dependencies
+
+The security guarantees depend on standard JavaScript built-ins and prototypes remaining uncompromised:
+- `Object`, `Object.prototype`, and methods such as `Object.assign`, `Object.create`, `Object.defineProperty`, `Object.freeze`, and `Object.setPrototypeOf`
+- `Set`, `Set.prototype`, and methods such as `Set.prototype.add`, `Set.prototype.delete`, and `Set.prototype[Symbol.iterator]`
+- `Symbol`, `Symbol.iterator`, and `Symbol.for`
+- `Function.prototype`
+
+If untrusted code executes prior to class initialization or mutates these built-in prototypes or methods (e.g. prototype pollution or monkey-patching), it could intercept shared state or subvert verification tokens.
+
+### Environmental Hardening
+
+To harden runtime environments you control (e.g., at Node.js or Deno startup before loading untrusted modules):
+
+```javascript
+if (!Object.isFrozen(Object)) {
+	Object.freeze(Object);
+	Object.freeze(Object.prototype);
+	Object.freeze(Set);
+	Object.freeze(Set.prototype);
+	Object.freeze(Symbol);
+	Object.freeze(Function.prototype);
+}
+```
+
+Additionally, `Base` and `Sub` implementations freeze their prototypes and constructors (`Object.freeze(Base.prototype)`, `Object.freeze(Base)`) as well as the protected prototypes (`__protected`) to guard against prototype tampering after initialization.
+
+### Practical Limitations
+
+Integrity management is difficult even under the best of circumstances and is impossible to guarantee in uncontrolled environments (such as web browsers executing arbitrary third-party scripts or browser extensions). The pattern provides robust encapsulation for application architecture and guards against accidental misuse, but true security isolation in JavaScript requires a hardened, pristine runtime environment.
+
 ## Browser Support
 
 Works in all modern browsers and Deno / Node.js / etc. environments that support:
@@ -334,3 +440,4 @@ This is a pattern demonstration. Feel free to adapt it to your needs or suggest 
 ## Credits
 
 - The new, shorter `#_` naming convention was inspired by this [gist](https://gist.github.com/crisdosaygo/636a40f9e47967cf14b0d4b5ebd68e72) by [crisdosaygo](https://github.com/crisdosaygo/).
+- Many thanks to [Jordan Harband](https://es.discourse.group/u/ljharb/summary) for [detailed analysis, feedback, and fixes](https://es.discourse.group/t/protected-support-for-class/68/30).

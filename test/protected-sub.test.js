@@ -4,6 +4,7 @@
 
 import { assertEquals, assertExists, assertThrows } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import { Base, _GET, _SUB } from '../protected-base.js';
+import { Sub as ExportedSub } from '../protected-sub.js';
 
 // Create a Sub class for testing
 class Sub extends Base {
@@ -14,9 +15,9 @@ class Sub extends Base {
 		this[_GET]();
 	}
 
-	[_SUB](subs) {
-		super[_SUB](subs);
-		subs.add((g) => this.#_ ||= g);
+	[_SUB](subFn) {
+		const subToken = super[_SUB](subFn);
+		return subFn(subToken, (g) => { this.#_ ||= g; });
 	}
 
 	get_() {
@@ -32,19 +33,21 @@ class Sub extends Base {
 	}
 
 	// Pseudo-protected method
-	guardedMethod(guarded) {
-		if (guarded !== this.#_) throw new Error('Unauthorized method call');
+	gatedMethod(state) {
+		if (state !== this.#_) throw new Error('Unauthorized method call');
 		return 'authorized';
 	}
 
-	// Method to call guardedMethod on self
-	callGuardedMethod() {
-		return this.guardedMethod(this.#_);
+	// Method to call gatedMethod on self
+	callGatedMethod() {
+		return this.gatedMethod(this.#_);
 	}
 
-	// Method to call guardedMethod on another instance
-	callOtherGuardedMethod(other) {
-		return other.guardedMethod(other.#_);
+	// Method to call gatedMethod on another instance
+	callOtherGatedMethod(other) {
+		if (#_ in other) {
+			return other.gatedMethod(other.#_);
+		}
 	}
 }
 
@@ -77,18 +80,18 @@ Deno.test('Sub class - protected properties should persist across method calls',
 	assertEquals(instance.getProtectedProp('prop2'), 'value2');
 });
 
-Deno.test('Sub class - pseudo-protected method should accept valid guarded', () => {
+Deno.test('Sub class - pseudo-protected method should accept valid state', () => {
 	const instance = new Sub();
-	const result = instance.callGuardedMethod();
+	const result = instance.callGatedMethod();
 	assertEquals(result, 'authorized');
 });
 
-Deno.test('Sub class - pseudo-protected method should reject invalid guarded', () => {
+Deno.test('Sub class - pseudo-protected method should reject invalid state', () => {
 	const instance = new Sub();
-	const fakeGuarded = {};
+	const fakeState = {};
 	
 	assertThrows(
-		() => instance.guardedMethod(fakeGuarded),
+		() => instance.gatedMethod(fakeState),
 		Error,
 		'Unauthorized method call'
 	);
@@ -98,8 +101,8 @@ Deno.test('Sub class - should support cross-instance protected method calls', ()
 	const instance1 = new Sub();
 	const instance2 = new Sub();
 	
-	// instance1 can call guardedMethod on instance2
-	const result = instance1.callOtherGuardedMethod(instance2);
+	// instance1 can call gatedMethod on instance2
+	const result = instance1.callOtherGatedMethod(instance2);
 	assertEquals(result, 'authorized');
 });
 
@@ -112,18 +115,18 @@ Deno.test('Sub class - can cross-call more-derived (SubSub) instance', () => {
 			this[_GET]();
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 	}
 
 	const subInstance = new Sub();
 	const subSubInstance = new SubSub();
 	
-	// Sub instance can call guardedMethod on SubSub instance
+	// Sub instance can call gatedMethod on SubSub instance
 	// because SubSub extends Sub, so Sub has access to SubSub's Sub-level #_
-	const result = subInstance.callOtherGuardedMethod(subSubInstance);
+	const result = subInstance.callOtherGatedMethod(subSubInstance);
 	assertEquals(result, 'authorized');
 });
 
@@ -136,16 +139,16 @@ Deno.test('Sub class - SubSub cannot access less-derived Sub #_', () => {
 			this[_GET]();
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		// This method tries to access other.#_ where #_ is SubSub's private field
-		tryCallOtherGuardedMethod(other) {
+		tryCallOtherGatedMethod(other) {
 			// This will throw TypeError if other is a Sub (not SubSub)
 			// because Sub instances don't have a SubSub-level #_ field
-			return other.guardedMethod(other.#_);
+			return other.gatedMethod(other.#_);
 		}
 	}
 
@@ -155,7 +158,7 @@ Deno.test('Sub class - SubSub cannot access less-derived Sub #_', () => {
 	// SubSub trying to access Sub's #_ should throw TypeError
 	// because Sub doesn't have SubSub's #_ private field
 	assertThrows(
-		() => subSubInstance.tryCallOtherGuardedMethod(subInstance),
+		() => subSubInstance.tryCallOtherGatedMethod(subInstance),
 		TypeError
 	);
 });
@@ -170,9 +173,9 @@ Deno.test('Sub class - cross-instance access to protected properties', () => {
 			this.#_.value = value;
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		compareWith(otherNode) {
@@ -199,9 +202,9 @@ Deno.test('Sub class - multi-level inheritance', () => {
 			this[_GET]();
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		getSubSub_() {
@@ -227,9 +230,9 @@ Deno.test('Sub class - protected properties are shared across hierarchy', () => 
 			this.#_.level1 = 'L1';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		get_() {
@@ -246,9 +249,9 @@ Deno.test('Sub class - protected properties are shared across hierarchy', () => 
 			this.#_.level2 = 'L2';
 		}
 
-		[_SUB](subs) {
-			super[_SUB](subs);
-			subs.add((g) => this.#_ ||= g);
+		[_SUB](subFn) {
+			const subToken = super[_SUB](subFn);
+			return subFn(subToken, (g) => { this.#_ ||= g; });
 		}
 
 		get_() {
@@ -262,4 +265,60 @@ Deno.test('Sub class - protected properties are shared across hierarchy', () => 
 	// Both levels should have added their properties to the same object
 	assertEquals(_.level1, 'L1');
 	assertEquals(_.level2, 'L2');
+});
+
+Deno.test('Exported Sub class - should create an instance and inherit correctly', () => {
+	const instance = new ExportedSub();
+	assertExists(instance);
+	assertEquals(instance instanceof ExportedSub, true);
+	assertEquals(instance instanceof Base, true);
+});
+
+Deno.test('Exported Sub class - method should execute and access protected state', () => {
+	const instance = new ExportedSub();
+	instance.method();
+});
+
+Deno.test('Exported Sub class - pseudo-protected method calls on self and other instances', () => {
+	const instance1 = new ExportedSub();
+	const instance2 = new ExportedSub();
+
+	// callGatedMethod on self
+	instance1.callGatedMethod();
+
+	// callOtherGatedMethod on compatible instance
+	instance1.callOtherGatedMethod(instance2);
+
+	// callOtherGatedMethod on incompatible instance (exercises else branch)
+	instance1.callOtherGatedMethod({});
+	instance1.callOtherGatedMethod(new Base());
+
+	// gatedMethod with invalid state throws
+	assertThrows(
+		() => instance1.gatedMethod({}),
+		Error,
+		'Unauthorized method call'
+	);
+});
+
+Deno.test('Exported Sub class - static __protected prototype properties and methods', () => {
+	assertEquals(ExportedSub.__protected.protoSub, true);
+	assertEquals(ExportedSub.__protected.protoBase, true);
+
+	const instance = new ExportedSub();
+	// callProtectedLogger triggers Sub's logState, which calls super.logState()
+	instance.callProtectedLogger();
+
+	// Sub.__protected.logState throws if caller association is invalid
+	assertThrows(
+		() => ExportedSub.__protected.logState.call({ __this: new ExportedSub() }),
+		Error,
+		'Unauthorized'
+	);
+});
+
+Deno.test('Exported Sub class - Sub, Sub.prototype, and Sub.__protected are frozen', () => {
+	assertEquals(Object.isFrozen(ExportedSub), true);
+	assertEquals(Object.isFrozen(ExportedSub.prototype), true);
+	assertEquals(Object.isFrozen(ExportedSub.__protected), true);
 });

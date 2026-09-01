@@ -4,19 +4,31 @@
  * Last modified: 2026-02-12
  *
  * Based on https://www.kappacs.com/implementing-javascript-protected-properties
+ *
+ * NOTE - Depends on environmental integrity for security, e.g.:
+ *  - Object, Object.prototype, Object.prototype.{assign,create,freeze}
+ *  - Set, Set.prototype, Set.prototype.{add,delete}
+ *  - Set.prototype[Symbol.iterator]
+ *  - Symbol, Symbol.iterator
+ *  - Anyplace else you decide to pass protected state
+ * Integrity management is difficult even under the best of circumstances,
+ * and impossible to guarantee in uncontrolled environments (e.g. browsers).
  */
 
 // NOTE: #_ and #_subs were formerly called #guarded and #guardedSubs
 
 // Can be exported local, global, exported global, etc. according to preference
+// (These are for collision avoidance, not any part of security)
 export const _GET = Symbol.for('jsProtectedGet');
 export const _SUB = Symbol.for('jsProtectedSub');
 
 export class Base {
 	#_; // Base's private access to shared protected properties
 	#_subs = new Set(); // Protected-property subscriptions (setter functions)
+	#_subFn;
+	#_subToken = Symbol();
 
-	static __protected = { // Base-class prototype for protected shared-state object
+	static __protected = Object.freeze({ // Base-class prototype for protected shared-state object
 		logState () {
 			const [thys, _thys] = [this.__this, this];
 
@@ -29,15 +41,21 @@ export class Base {
 			console.log('Base #_:', _thys);
 		},
 		get protoBase () { return true; }
-	};
+	});
 
 	constructor () {
 		const state = this.#_ = Object.assign(Object.create(this.constructor.__protected), {
-			__this: this, // Original this enables unbound, prototyped, protected methods
 			base: true,
 		});
+		// Original this enables unbound, prototyped, protected methods
+		Object.defineProperty(state, '__this', { value: this });
 
-		this[_SUB](this.#_subs); // Invite subscribers
+		this.#_subFn = (token, callback) => {
+			if (token !== this.#_subToken) throw new Error('Unauthorized');
+			this.#_subs.add(callback);
+			return token;
+		};
+		this[_SUB](this.#_subFn); // Invite subscribers
 		// Public props: this.prop
 		// Protected props: this.#_.prop
 		// Private props: this.#prop
@@ -61,5 +79,12 @@ export class Base {
 		catch (_) {/**/}
 	}
 
-	[_SUB] () { } // Base-class subscription stub (required)
+	[_SUB] (subFn) {
+		// Return the verification token if the subscriber function matches
+		if (subFn !== this.#_subFn) throw new Error('Unauthorized');
+		return this.#_subToken;
+	}
 }
+
+Object.freeze(Base.prototype);
+Object.freeze(Base);

@@ -9,9 +9,9 @@ class B extends Base {
 		this.#_.propB = 'B';
 	}
 
-	[_SUB] (subs) {
-		super[_SUB](subs);
-		subs.add((g) => this.#_ ||= g);
+	[_SUB] (subFn) {
+		const subToken = super[_SUB](subFn);
+		return subFn(subToken, (g) => { this.#_ ||= g; });
 	}
 
 	logState () {
@@ -28,9 +28,9 @@ class C extends B {
 		this.#_.propC = 'C';
 	}
 
-	[_SUB] (subs) {
-		super[_SUB](subs);
-		subs.add((p) => this.#_ ||= p);
+	[_SUB] (subFn) {
+		const subToken = super[_SUB](subFn);
+		return subFn(subToken, (p) => { this.#_ ||= p; });
 	}
 }
 
@@ -38,11 +38,15 @@ const instance = new C();
 instance.logState();
 
 // Attempt to subvert protected state
-// (should not have any effect)
-const subs = new Set(), newState = { updated: true };
-instance[_SUB](subs);
-for (const sub of subs) {
-	sub(newState);
+// (should fail and throw Unauthorized)
+try {
+	const newState = { updated: true };
+	instance[_SUB]((_token, cb) => {
+		cb(newState);
+	});
+} catch (e) {
+	console.log('Subversion attempt failed as expected:', e.message);
 }
+
 // Should report same original values
 instance.logState();

@@ -9,7 +9,7 @@ export class Sub extends Base {
 	#_; // Sub's private access to shared protected properties
 
 	// Sub-class prototype for protected shared-state object
-	static __protected = Object.setPrototypeOf({
+	static __protected = Object.freeze(Object.setPrototypeOf({
 		logState () {
 			const [thys, _thys] = [this.__this, this];
 
@@ -18,7 +18,7 @@ export class Sub extends Base {
 			super.logState();
 		},
 		get protoSub () { return true; }
-	}, super.__protected);
+	}, super.__protected));
 
 	constructor () {
 		super();
@@ -33,9 +33,10 @@ export class Sub extends Base {
 
 	// Subscribe to #_ in every sub-class needing access
 	// protected properties
-	[_SUB] (subs) {
-		super[_SUB](subs); // Must be first
-		subs.add((p) => this.#_ ||= p); // Set this.#_ once
+	[_SUB] (subFn) {
+		const subToken = super[_SUB](subFn); // Must be first
+
+		return subFn(subToken, (p) => { this.#_ ||= p; }); // Set this.#_ once
 	}
 
 	method () { // Example consumer
@@ -73,3 +74,6 @@ export class Sub extends Base {
 		}
 	}
 }
+
+Object.freeze(Sub.prototype);
+Object.freeze(Sub);
